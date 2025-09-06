@@ -1,0 +1,62 @@
+{
+    "cmake.showSystemKits": false,
+    "cmake.options.statusBarVisibility": "hidden",
+    "cmake.options.advanced": {
+        "build": {
+            "statusBarVisibility": "hidden"
+        },
+        "launch": {
+            "statusBarVisibility": "hidden"
+        },
+        "debug": {
+            "statusBarVisibility": "hidden"
+        }
+    },
+    "cmake.configureOnEdit": false,
+    "cmake.automaticReconfigure": false,
+    "cmake.configureOnOpen": false,
+    "cmake.generator": "Ninja",
+    "cmake.cmakePath": "${userHome}/.pico-sdk/cmake/v3.31.5/bin/cmake",
+    "C_Cpp.debugShortcut": false,
+    "terminal.integrated.env.windows": {
+        "PICO_SDK_PATH": "${env:USERPROFILE}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "${env:USERPROFILE}/.pico-sdk/toolchain/14_2_Rel1",
+        "Path": "${env:USERPROFILE}/.pico-sdk/toolchain/14_2_Rel1/bin;${env:USERPROFILE}/.pico-sdk/picotool/2.2.0/picotool;${env:USERPROFILE}/.pico-sdk/cmake/v3.31.5/bin;${env:USERPROFILE}/.pico-sdk/ninja/v1.12.1;${env:PATH}"
+    },
+    "terminal.integrated.env.osx": {
+        "PICO_SDK_PATH": "${env:HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "${env:HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "PATH": "${env:HOME}/.pico-sdk/toolchain/14_2_Rel1/bin:${env:HOME}/.pico-sdk/picotool/2.2.0/picotool:${env:HOME}/.pico-sdk/cmake/v3.31.5/bin:${env:HOME}/.pico-sdk/ninja/v1.12.1:${env:PATH}"
+    },
+    "terminal.integrated.env.linux": {
+        "PICO_SDK_PATH": "${env:HOME}/.pico-sdk/sdk/2.2.0",
+        "PICO_TOOLCHAIN_PATH": "${env:HOME}/.pico-sdk/toolchain/14_2_Rel1",
+        "PATH": "${env:HOME}/.pico-sdk/toolchain/14_2_Rel1/bin:${env:HOME}/.pico-sdk/picotool/2.2.0/picotool:${env:HOME}/.pico-sdk/cmake/v3.31.5/bin:${env:HOME}/.pico-sdk/ninja/v1.12.1:${env:PATH}"
+    },
+    "raspberry-pi-pico.cmakeAutoConfigure": true,
+    "raspberry-pi-pico.useCmakeTools": false,
+    "raspberry-pi-pico.cmakePath": "${HOME}/.pico-sdk/cmake/v3.31.5/bin/cmake",
+    "raspberry-pi-pico.ninjaPath": "${HOME}/.pico-sdk/ninja/v1.12.1/ninja",
+    // C/C++ source/header files → 4 spaces
+    "[c]": {
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true
+    },
+    "[cpp]": {
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true
+    },
+    "[cuda-cpp]": {
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true
+    },
+    "[objc]": {
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true
+    },
+    // CMakeLists.txt → 2 spaces
+    "[cmake]": {
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+    }
+}
