@@ -9,7 +9,7 @@
 #define CONFIG_SPI_MASTER_MODE  (1)
 #define CONFIG_SPI_SLAVE_MODE   (0)
 
-#define BUF_SIZE        (256)
+#define BUF_SIZE        (4096)
 
 // #define SPI_BUS         (spi_default)
 #define SPI_BUS         (spi0)
@@ -79,6 +79,7 @@ struct spi_cfg
 
 int driver_spi_init(struct spi_cfg *cfg);
 void spi_master_test();
+void dwm1000_spi_master_test();
 void spi_slave_test();
 
 #endif  // ~ SPI_MASTER_H

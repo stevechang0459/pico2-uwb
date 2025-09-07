@@ -32,7 +32,8 @@ int main() {
     }
 
     #if (CONFIG_SPI_MASTER_MODE)
-    spi_master_test();
+    // spi_master_test();
+    dwm1000_spi_master_test();
     #endif
     #if (CONFIG_SPI_SLAVE_MODE)
     spi_slave_test();
