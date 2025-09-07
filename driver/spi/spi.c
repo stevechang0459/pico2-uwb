@@ -23,13 +23,17 @@ union dwm1000_tran_header1
     uint8_t value;
 };
 
-struct dwm1000_tran_header2
+union dwm1000_tran_header2
 {
-    uint16_t rid      : 6;              // Register file ID – Range 0x00 to 0x3F (64 locations)
-    uint16_t si       : 1;              // Bit = 1, says sub-index is not present
-    uint16_t op       : 1;              // Operation: 0 = Read, 1 = Write
-    uint16_t sub_addr : 7;              // 7-bit Register File sub-address, range 0x00 to 0x7F (128 byte locations)
-    uint16_t ext      : 1;              // Extended Address: 0 = no
+    struct
+    {
+        uint16_t rid      : 6;              // Register file ID – Range 0x00 to 0x3F (64 locations)
+        uint16_t si       : 1;              // Bit = 1, says sub-index is not present
+        uint16_t op       : 1;              // Operation: 0 = Read, 1 = Write
+        uint16_t sub_addr : 7;              // 7-bit Register File sub-address, range 0x00 to 0x7F (128 byte locations)
+        uint16_t ext      : 1;              // Extended Address: 0 = no
+    };
+    uint16_t value;
 };
 
 static inline void cs_select(uint cs_pin) {
@@ -53,15 +57,15 @@ enum dwm1000_spi_operation
 uint8_t m_tx_buf[4096];
 uint8_t m_rx_buf[4096];
 
-int dwm1000_non_sub_index_read(uint8_t reg_file_id, void *buf, size_t len)
+int dwm1000_non_indexed_read(uint8_t reg_file_id, void *buf, size_t len)
 {
-    if ((buf == NULL) || (reg_file_id > 0x3F) || len < 2)
+    if ((buf == NULL) || (reg_file_id > 0x3F) || (len < 2) || (len + 1 > BUF_SIZE))
         goto err;
 
     union dwm1000_tran_header1 header = {
         .rid = reg_file_id,
-        .si = 0,
-        .op = DWM1000_SPI_READ,
+        .si  = 0,
+        .op  = DWM1000_SPI_READ,
     };
 
     memset(m_tx_buf, 0, len + 1);
@@ -76,6 +80,34 @@ int dwm1000_non_sub_index_read(uint8_t reg_file_id, void *buf, size_t len)
 err:
     return -1;
 }
+
+int dwm1000_short_indexed_read(uint8_t reg_file_id, uint8_t sub_addr, void *buf, size_t len)
+{
+    if ((buf == NULL) || (reg_file_id > 0x3F) || (sub_addr > 0x7F) || (len + 2 > BUF_SIZE))
+        goto err;
+
+    union dwm1000_tran_header2 header = {
+        .rid      = reg_file_id,
+        .si       = 1,
+        .op       = DWM1000_SPI_READ,
+        .sub_addr = sub_addr,
+        .ext      = 0,
+    };
+
+    memset(m_tx_buf, 0, len + 2);
+    memset(m_rx_buf, 0, len + 2);
+    m_tx_buf[0] = header.value & 0xFF;
+    m_tx_buf[1] = header.value >> 8;
+
+    cs_select(SPI0_CSN);
+    spi_write_read_blocking(SPI_BUS, m_tx_buf, m_rx_buf, len + 2);
+    cs_deselect(SPI0_CSN);
+    memcpy(buf, m_rx_buf + 2, len);
+    return 0;
+err:
+    return -1;
+}
+
 
 int driver_dwm1000_spi_init(struct spi_cfg *cfg)
 {
@@ -125,10 +157,14 @@ void dwm1000_spi_master_test()
 
     bool led_out = 0;
     for (size_t i = 0; ; ++i) {
-        dwm1000_non_sub_index_read(0x00, rx_buf, 4);
-
         printf("Transaction #%d\n", i);
+
+        dwm1000_non_indexed_read(0x00, rx_buf, 4);
         print_buf(rx_buf,  4);
+        memset(rx_buf, 0, sizeof(rx_buf));
+
+        dwm1000_short_indexed_read(0x00, 2, rx_buf, 2);
+        print_buf(rx_buf,  2);
         memset(rx_buf, 0, sizeof(rx_buf));
 
         pico_set_led(led_out);
