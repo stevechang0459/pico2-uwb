@@ -160,11 +160,35 @@ void dwm1000_spi_master_test()
         printf("Transaction #%d\n", i);
 
         dwm1000_non_indexed_read(0x00, rx_buf, 4);
-        print_buf(rx_buf,  4);
+        print_buf(rx_buf, 4, "DEV_ID");
         memset(rx_buf, 0, sizeof(rx_buf));
 
-        dwm1000_short_indexed_read(0x00, 2, rx_buf, 2);
-        print_buf(rx_buf,  2);
+        // dwm1000_short_indexed_read(0x00, 2, rx_buf, 2);
+        // print_buf(rx_buf, 2);
+        // memset(rx_buf, 0, sizeof(rx_buf));
+
+        dwm1000_non_indexed_read(0x01, rx_buf, 8);
+        print_buf(rx_buf, 8, "EUI");
+        memset(rx_buf, 0, sizeof(rx_buf));
+
+        dwm1000_non_indexed_read(0x03, rx_buf, 4);
+        print_buf(rx_buf, 4, "PANADR");
+        memset(rx_buf, 0, sizeof(rx_buf));
+
+        dwm1000_non_indexed_read(0x04, rx_buf, 4);
+        print_buf(rx_buf, 4, "SYS_CFG");
+        memset(rx_buf, 0, sizeof(rx_buf));
+
+        dwm1000_non_indexed_read(0x06, rx_buf, 5);
+        print_buf(rx_buf, 5, "SYS_TIME");
+        memset(rx_buf, 0, sizeof(rx_buf));
+
+        dwm1000_non_indexed_read(0x08, rx_buf, 5);
+        print_buf(rx_buf, 5, "TX_FCTRL");
+        memset(rx_buf, 0, sizeof(rx_buf));
+
+        dwm1000_non_indexed_read(0x0A, rx_buf, 5);
+        print_buf(rx_buf, 5, "DX_TIME");
         memset(rx_buf, 0, sizeof(rx_buf));
 
         pico_set_led(led_out);
@@ -209,7 +233,7 @@ void spi_master_test()
     memset(rx_buf, 0, sizeof(rx_buf));
 
     printf("SPI master says: The following buffer will be written to MOSI endlessly:\n");
-    print_buf(tx_buf, 5);
+    print_buf(tx_buf, 5, NULL);
 
     bool led_out = 0;
     for (size_t i = 0; ; ++i) {
@@ -218,7 +242,7 @@ void spi_master_test()
 
         // Write to stdio whatever came in on the MISO line.
         printf("SPI master read[%d]:\n", i);
-        print_buf(rx_buf,  5);
+        print_buf(rx_buf,  5, NULL);
         memset(rx_buf, 0, sizeof(rx_buf));
 
         pico_set_led(led_out);

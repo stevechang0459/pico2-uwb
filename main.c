@@ -21,7 +21,7 @@ int main() {
     for (int i = 0; i < sizeof(buf); i++) {
         buf[i] = i;
     }
-    print_buf(buf, 16);
+    print_buf(buf, 16, NULL);
 
     for (int i = 0; i < 6; i++) {
         printf("i:%d\n", i);

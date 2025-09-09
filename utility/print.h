@@ -5,6 +5,6 @@
 #include <stdio.h>
 #include <stdint.h>
 
-void print_buf(uint8_t buf[], size_t len);
+void print_buf(uint8_t buf[], size_t len, const char *title);
 
 #endif  // ~ PRINT_H
