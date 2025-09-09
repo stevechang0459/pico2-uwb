@@ -77,9 +77,10 @@ struct spi_cfg
     bool slave_mode;
 };
 
+void cs_select(uint cs_pin);
+void cs_deselect(uint cs_pin);
 int driver_spi_init(struct spi_cfg *cfg);
 void spi_master_test();
-void dwm1000_spi_master_test();
 void spi_slave_test();
 
 #endif  // ~ SPI_MASTER_H

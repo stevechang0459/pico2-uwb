@@ -1,5 +1,6 @@
 add_library(driver_spi STATIC
   spi.c
+  dw1000.c
 )
 
 # Expose this directory for #include "spi.h"

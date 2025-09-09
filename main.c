@@ -9,6 +9,7 @@
 #include "print.h"
 #include "spi.h"
 #include "led.h"
+#include "dw1000.h"
 
 int main() {
     stdio_init_all();
@@ -21,7 +22,7 @@ int main() {
     for (int i = 0; i < sizeof(buf); i++) {
         buf[i] = i;
     }
-    print_buf(buf, 16);
+    print_buf(buf, 16, NULL);
 
     for (int i = 0; i < 6; i++) {
         printf("i:%d\n", i);
@@ -33,7 +34,7 @@ int main() {
 
     #if (CONFIG_SPI_MASTER_MODE)
     // spi_master_test();
-    dwm1000_spi_master_test();
+    dw1000_spi_master_test();
     #endif
     #if (CONFIG_SPI_SLAVE_MODE)
     spi_slave_test();

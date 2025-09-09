@@ -39,7 +39,15 @@
 		"files.associations": {
 			"stdio.h": "c",
 			"print.h": "c",
-			"cstdint": "c"
+			"cstdint": "c",
+			"string_view": "c",
+			"array": "c",
+			"format": "c",
+			"initializer_list": "c",
+			"span": "c",
+			"stdlib.h": "c",
+			"binary_info.h": "c",
+			"spi.h": "c"
 		}
 	}
 }
