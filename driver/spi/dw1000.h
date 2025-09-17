@@ -283,6 +283,19 @@ union dw1000_reg_sys_status
     uint8_t value[5];
 };
 
+// Register file: 0x17 – Transmit Time Stamp
+union dw1000_reg_tx_time_stamp
+{
+    struct
+    {
+        uint32_t tx_stamp_l;
+        uint32_t tx_stamp_h : 8;
+        uint32_t tx_rawst_l : 24;
+        uint16_t tx_rawst_h;
+    };
+    uint8_t value[10];
+};
+
 // Register file: 0x1A – Acknowledgement time and response time
 
 #pragma pop

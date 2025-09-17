@@ -302,11 +302,11 @@ void dw1000_spi_master_test()
             switch (reg->reg_file_id) {
             case DW1000_DEV_ID:
                 union dw1000_reg_dev_id *dev_id = (void *)rx_buf;
-                printf("dev_id->value      : %08x\n", dev_id->value);
-                printf("dev_id->rev        : %x\n", dev_id->rev);
-                printf("dev_id->ver        : %x\n", dev_id->ver);
-                printf("dev_id->model      : %x\n", dev_id->model);
-                printf("dev_id->ridtag     : %x\n", dev_id->ridtag);
+                printf("dev_id->value               : %08x\n", dev_id->value);
+                printf("dev_id->rev                 : %x\n", dev_id->rev);
+                printf("dev_id->ver                 : %x\n", dev_id->ver);
+                printf("dev_id->model               : %x\n", dev_id->model);
+                printf("dev_id->ridtag              : %x\n", dev_id->ridtag);
                 break;
 
             case DW1000_EUI:
@@ -326,57 +326,57 @@ void dw1000_spi_master_test()
 
             case DW1000_PANADR:
                 union dw1000_reg_panadr *panadr = (void *)rx_buf;
-                printf("panadr->short_addr : %x\n", panadr->short_addr);
-                printf("panadr->pan_id     : %x\n", panadr->pan_id);
+                printf("panadr->short_addr          : %x\n", panadr->short_addr);
+                printf("panadr->pan_id              : %x\n", panadr->pan_id);
                 break;
 
             case DW1000_SYS_CFG:
                 union dw1000_reg_sys_cfg *sys_cfg = (void *)rx_buf;
-                printf("sys_cfg->value      : %08x\n", sys_cfg->value);
-                printf("sys_cfg->ffen       : %x\n", sys_cfg->ffen);
-                printf("sys_cfg->ffbc       : %x\n", sys_cfg->ffbc);
-                printf("sys_cfg->ffab       : %x\n", sys_cfg->ffab);
-                printf("sys_cfg->ffad       : %x\n", sys_cfg->ffad);
-                printf("sys_cfg->ffaa       : %x\n", sys_cfg->ffaa);
-                printf("sys_cfg->ffam       : %x\n", sys_cfg->ffam);
-                printf("sys_cfg->ffar       : %x\n", sys_cfg->ffar);
-                printf("sys_cfg->ffa4       : %x\n", sys_cfg->ffa4);
-                printf("sys_cfg->ffa5       : %x\n", sys_cfg->ffa5);
-                printf("sys_cfg->hirq_pol   : %x\n", sys_cfg->hirq_pol);
-                printf("sys_cfg->spi_edge   : %x\n", sys_cfg->spi_edge);
-                printf("sys_cfg->dis_fce    : %x\n", sys_cfg->dis_fce);
-                printf("sys_cfg->dis_drxb   : %x\n", sys_cfg->dis_drxb);
-                printf("sys_cfg->dis_phe    : %x\n", sys_cfg->dis_phe);
-                printf("sys_cfg->dis_rsde   : %x\n", sys_cfg->dis_rsde);
-                printf("sys_cfg->fcs_init2f : %x\n", sys_cfg->fcs_init2f);
-                printf("sys_cfg->dis_phe    : %x\n", sys_cfg->dis_phe);
-                printf("sys_cfg->phr_mode   : %x\n", sys_cfg->phr_mode);
-                printf("sys_cfg->dis_stxp   : %x\n", sys_cfg->dis_stxp);
-                printf("sys_cfg->rxm110k    : %x\n", sys_cfg->rxm110k);
-                printf("sys_cfg->rxwtoe     : %x\n", sys_cfg->rxwtoe);
-                printf("sys_cfg->rxautr     : %x\n", sys_cfg->rxautr);
-                printf("sys_cfg->autoack    : %x\n", sys_cfg->autoack);
-                printf("sys_cfg->aackpend   : %x\n", sys_cfg->aackpend);
+                printf("sys_cfg->value              : %08x\n", sys_cfg->value);
+                printf("sys_cfg->ffen               : %x\n", sys_cfg->ffen);
+                printf("sys_cfg->ffbc               : %x\n", sys_cfg->ffbc);
+                printf("sys_cfg->ffab               : %x\n", sys_cfg->ffab);
+                printf("sys_cfg->ffad               : %x\n", sys_cfg->ffad);
+                printf("sys_cfg->ffaa               : %x\n", sys_cfg->ffaa);
+                printf("sys_cfg->ffam               : %x\n", sys_cfg->ffam);
+                printf("sys_cfg->ffar               : %x\n", sys_cfg->ffar);
+                printf("sys_cfg->ffa4               : %x\n", sys_cfg->ffa4);
+                printf("sys_cfg->ffa5               : %x\n", sys_cfg->ffa5);
+                printf("sys_cfg->hirq_pol           : %x\n", sys_cfg->hirq_pol);
+                printf("sys_cfg->spi_edge           : %x\n", sys_cfg->spi_edge);
+                printf("sys_cfg->dis_fce            : %x\n", sys_cfg->dis_fce);
+                printf("sys_cfg->dis_drxb           : %x\n", sys_cfg->dis_drxb);
+                printf("sys_cfg->dis_phe            : %x\n", sys_cfg->dis_phe);
+                printf("sys_cfg->dis_rsde           : %x\n", sys_cfg->dis_rsde);
+                printf("sys_cfg->fcs_init2f         : %x\n", sys_cfg->fcs_init2f);
+                printf("sys_cfg->dis_phe            : %x\n", sys_cfg->dis_phe);
+                printf("sys_cfg->phr_mode           : %x\n", sys_cfg->phr_mode);
+                printf("sys_cfg->dis_stxp           : %x\n", sys_cfg->dis_stxp);
+                printf("sys_cfg->rxm110k            : %x\n", sys_cfg->rxm110k);
+                printf("sys_cfg->rxwtoe             : %x\n", sys_cfg->rxwtoe);
+                printf("sys_cfg->rxautr             : %x\n", sys_cfg->rxautr);
+                printf("sys_cfg->autoack            : %x\n", sys_cfg->autoack);
+                printf("sys_cfg->aackpend           : %x\n", sys_cfg->aackpend);
                 break;
 
             case DW1000_TX_FCTRL:
                 union dw1000_reg_tx_fctrl *tx_fctrl = (void *)rx_buf;
-                printf("Transmit Frame Length     : %d bytes\n", tx_fctrl->ofs_00.tflen);
-                printf("tx_fctrl->ofs_00.tfle     : %x\n", tx_fctrl->ofs_00.tfle);
-                printf("tx_fctrl->ofs_00.r        : %x\n", tx_fctrl->ofs_00.r);
+            printf("Transmit Frame Length           : %d bytes\n", tx_fctrl->ofs_00.tflen);
+                printf("tx_fctrl->ofs_00.tfle       : %x\n", tx_fctrl->ofs_00.tfle);
+                printf("tx_fctrl->ofs_00.r          : %x\n", tx_fctrl->ofs_00.r);
                 uint16_t txbr[4] = {
                     [0]  = 110,
                     [1]  = 850,
                     [2]  = 6800,
                 };
-                printf("PRF                       : %d kbps\n", txbr[tx_fctrl->ofs_00.txbr]);
-                printf("tx_fctrl->ofs_00.tr       : %x\n", tx_fctrl->ofs_00.tr);
+                printf("PRF                         : %d kbps\n", txbr[tx_fctrl->ofs_00.txbr]);
+                printf("tx_fctrl->ofs_00.tr         : %x\n", tx_fctrl->ofs_00.tr);
                 uint8_t prf[4] = {
                     [0] = 4,
                     [1] = 16,
                     [2] = 64,
                 };
-                printf("PRF                       : %d MHz\n", prf[tx_fctrl->ofs_00.txprf]);
+                printf("PRF                         : %d MHz\n", prf[tx_fctrl->ofs_00.txprf]);
                 uint16_t txpsr[16] = {
                     [4]  = 64,
                     [5]  = 128,
@@ -387,9 +387,9 @@ void dw1000_spi_master_test()
                     [10] = 2048,
                     [12] = 4096,
                 };
-                printf("Preamble Length           : %d bytes\n", txpsr[tx_fctrl->ofs_00.pe << 2 | tx_fctrl->ofs_00.txpsr]);
-                printf("tx_fctrl->ofs_00.txboffs  : %x\n", tx_fctrl->ofs_00.txboffs);
-                printf("tx_fctrl->ofs_04.ifsdelay : %x\n", tx_fctrl->ofs_04.ifsdelay);
+                printf("Preamble Length             : %d bytes\n", txpsr[tx_fctrl->ofs_00.pe << 2 | tx_fctrl->ofs_00.txpsr]);
+                printf("tx_fctrl->ofs_00.txboffs    : %x\n", tx_fctrl->ofs_00.txboffs);
+                printf("tx_fctrl->ofs_04.ifsdelay   : %x\n", tx_fctrl->ofs_04.ifsdelay);
                 break;
             };
         }
