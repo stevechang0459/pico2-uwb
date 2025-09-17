@@ -192,6 +192,16 @@ union dw1000_reg_tx_fctrl
     uint8_t value[5];
 };
 
+// Register file: 0x0A – Delayed Send or Receive Time
+union dw1000_reg_dx_time
+{
+    struct
+    {
+        uint8_t dx_time[5];             // Delayed Send or Receive Time (40-bit)
+    };
+    uint8_t value[5];
+};
+
 // Register file: 0x0D – System Control Register
 union dw1000_reg_sys_ctrl
 {
@@ -283,17 +293,37 @@ union dw1000_reg_sys_status
     uint8_t value[5];
 };
 
+// Register file: 0x15 – Receive Time Stamp
+union dw1000_reg_rx_time
+{
+    struct
+    {
+        uint8_t rx_time[14];
+    };
+    uint8_t value[14];
+};
+
 // Register file: 0x17 – Transmit Time Stamp
 union dw1000_reg_tx_time_stamp
 {
     struct
     {
-        uint32_t tx_stamp_l;
-        uint32_t tx_stamp_h : 8;
-        uint32_t tx_rawst_l : 24;
-        uint16_t tx_rawst_h;
+        uint32_t tx_stamp_l;            // This 40-bit (5-octet) field reports the fully adjusted time of transmission.
+        uint32_t tx_stamp_h : 8;        // This 40-bit (5-octet) field reports the fully adjusted time of transmission.
+        uint32_t tx_rawst_l : 24;       // This 40-bit (5-octet) field reports the Raw Timestamp for the frame.
+        uint16_t tx_rawst_h;            // This 40-bit (5-octet) field reports the Raw Timestamp for the frame.
     };
     uint8_t value[10];
+};
+
+// Register file: 0x18 – Transmitter Antenna Delay
+union dw1000_reg_tx_antd
+{
+    struct
+    {
+        uint16_t tx_antdl;              // 16-bit Delay from Transmit to Antenna
+    };
+    uint16_t value;
 };
 
 // Register file: 0x1A – Acknowledgement time and response time
