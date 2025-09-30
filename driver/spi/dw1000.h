@@ -181,6 +181,18 @@ union dw1000_reg_tx_fctrl_08_04
     uint8_t value;
 };
 
+// Register file: 0x06 – System Time Counter
+union dw1000_reg_sys_time
+{
+    uint8_t sys_time[5];                // System Time Counter (40-bit)
+    struct
+    {
+        uint32_t sys_time_l;
+        uint8_t sys_time_h;
+    };
+    uint8_t value[5];
+};
+
 // Register file: 0x08 – Transmit Frame Control
 union dw1000_reg_tx_fctrl
 {
@@ -195,9 +207,11 @@ union dw1000_reg_tx_fctrl
 // Register file: 0x0A – Delayed Send or Receive Time
 union dw1000_reg_dx_time
 {
+    uint8_t dx_time[5];                 // Delayed Send or Receive Time (40-bit)
     struct
     {
-        uint8_t dx_time[5];             // Delayed Send or Receive Time (40-bit)
+        uint32_t dx_time_l;
+        uint8_t dx_time_h;
     };
     uint8_t value[5];
 };
@@ -327,6 +341,175 @@ union dw1000_reg_tx_antd
 };
 
 // Register file: 0x1A – Acknowledgement time and response time
+
+
+// Sub-Register 0x2F:00 – Event Counter Control
+union dw1000_sub_reg_evc_ctrl
+{
+    struct
+    {
+        uint32_t evc_en  : 1;           // Event Counters Enable. SRW
+        uint32_t evc_clr : 1;           // Event Counters Clear. SRW
+        uint32_t rsvd    : 30;          // Reserved
+    };
+    uint32_t value;
+};
+
+// Sub-Register 0x2F:04 – PHR Error Counter
+union dw1000_sub_reg_evc_phe
+{
+    struct
+    {
+        uint16_t evc_phe : 12;          // PHR Error Event Counter. RO
+        uint16_t rsvd    : 4;           // Reserved
+    };
+    uint16_t value;
+};
+
+// Sub-Register 0x2F:06 – RSD Error Counter
+union dw1000_sub_reg_evc_rse
+{
+    struct
+    {
+        uint16_t evc_rse : 12;          // Reed Solomon decoder (Frame Sync Loss) Error Event Counter. RO
+        uint16_t rsvd    : 4;           // Reserved
+    };
+    uint16_t value;
+};
+
+// Sub-Register 0x2F:08 – FCS Good Counter
+union dw1000_sub_reg_evc_fcg
+{
+    struct
+    {
+        uint16_t evc_fcg : 12;          // Frame Check Sequence Good Event Counter. RO
+        uint16_t rsvd    : 4;           // Reserved
+    };
+    uint16_t value;
+};
+
+// Sub-Register 0x2F:0A – FCS Error Counter
+union dw1000_sub_reg_evc_fcs
+{
+    struct
+    {
+        uint16_t evc_fce : 12;          // Frame Check Sequence Error Event Counter. RO
+        uint16_t rsvd    : 4;           // Reserved
+    };
+    uint16_t value;
+};
+
+// Sub-Register 0x2F:0C – Frame Filter Rejection Counter
+union dw1000_sub_reg_evc_ffr
+{
+    struct
+    {
+        uint16_t evc_ffr : 12;          // Frame Filter Rejection Event Counter. RO
+        uint16_t rsvd    : 4;           // Reserved
+    };
+    uint16_t value;
+};
+
+// Sub-Register 0x2F:0E – RX Overrun Error Counter
+union dw1000_sub_reg_evc_ovr
+{
+    struct
+    {
+        uint16_t evc_ovr : 12;          // RX Overrun Error Event Counter. RO
+        uint16_t rsvd    : 4;           // Reserved
+    };
+    uint16_t value;
+};
+
+// Sub-Register 0x2F:10 – SFD Timeout Error Counter
+union dw1000_sub_reg_evc_sto
+{
+    struct
+    {
+        uint16_t evc_sto : 12;          // SFD (start of frame delimiter) timeout errors Event Counter. RO
+        uint16_t rsvd    : 4;           // Reserved
+    };
+    uint16_t value;
+};
+
+// Sub-Register 0x2F:12 – Preamble Detection Timeout Event Counter
+union dw1000_sub_reg_evc_pto
+{
+    struct
+    {
+        uint16_t evc_pto : 12;          // Preamble Detection Timeout Event Counter. RO
+        uint16_t rsvd    : 4;           // Reserved
+    };
+    uint16_t value;
+};
+
+// Sub-Register 0x2F:14 – RX Frame Wait Timeout Event Counter
+union dw1000_sub_reg_evc_fwto
+{
+    struct
+    {
+        uint16_t evc_fwto : 12;         // RX Frame Wait Timeout Event Counter. RO
+        uint16_t rsvd     : 4;          // Reserved
+    };
+    uint16_t value;
+};
+
+// Sub-Register 0x2F:16 – TX Frame Sent Counter
+union dw1000_sub_reg_evc_txfs
+{
+    struct
+    {
+        uint16_t evc_txfs : 12;         // TX Frame Sent Event Counter. RO
+        uint16_t rsvd     : 4;          // Reserved
+    };
+    uint16_t value;
+};
+
+// Sub-Register 0x2F:18 – Half Period Warning Counter
+
+// Sub-Register 0x2F:1A – Transmitter Power-Up Warning Counter
+
+// Sub-Register 0x2F:1C – EVC_RES1
+
+// Sub-Register 0x2F:24 – Digital Diagnostics Test Mode Control
+
+// Register file: 0x2F – Digital Diagnostics Interface
+union dw1000_reg_dig_diag
+{
+    struct
+    {
+        union dw1000_sub_reg_evc_ctrl evc_ctrl; // Sub-Register 0x2F:00 – Event Counter Control
+        union dw1000_sub_reg_evc_phe evc_phe;   // Sub-Register 0x2F:04 – PHR Error Counter
+        union dw1000_sub_reg_evc_rse evc_rse;   // Sub-Register 0x2F:06 – RSD Error Counter
+        union dw1000_sub_reg_evc_fcg evc_fcg;   // Sub-Register 0x2F:08 – FCS Good Counter
+        union dw1000_sub_reg_evc_
+    };
+    uint8_t value[41];
+};
+
+// Register files: 0x30 to 0x35 – Reserved
+
+// Sub-Register 0x36:00 – PMSC_CTRL0
+
+// Sub-Register 0x36:04 – PMSC_CTRL1
+
+// Sub-Register 0x36:08 – PMSC_RES1
+
+// Sub-Register 0x36:0C – PMSC_SNOZT
+
+// Sub-Register 0x36:10 – PMSC_RES2
+
+// Sub-Register 0x36:26 – PMSC_TXFSEQ
+
+// Sub-Register 0x36:28 – PMSC_LEDC
+
+// Register file: 0x36 – Power Management and System Control
+union dw1000_reg_pmsc
+{
+
+};
+
+// Register files: 0x37 to 0x3F – Reserved
 
 #pragma pop
 
