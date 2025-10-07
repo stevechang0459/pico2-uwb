@@ -351,17 +351,31 @@ err:
     return -1;
 }
 
-int dw1000_set_rx_para()
+struct dw1000_tx_para
 {
-    struct config {
-        uint32_t drx_tune2;
-    };
+    uint16_t tflen;                     // Transmit Frame Length (Data Length)
+    enum dw1000_txbr_sel txbr_sel;      // Data Rate
+    enum dw1000_txprf_sel txprf_sel;    // PRF
+    enum dw1000_txpsr_sel txpsr_sel;    // Preamble Length
+    uint16_t buf_ofs;                   // Transmit buffer index offset
+    uint8_t ifs_delay;                  // Inter-Frame Spacing (Delay)
+    uint64_t dx_time;                   // Delayed Send or Receive Time (Unit: 15.65 picoseconds)
+};
 
-    struct config cfg = {
-        .drx_tune2 = PAC_8_PRF_16MHZ,
-    };
+struct dw1000_rx_para
+{
+    uint32_t drx_tune2;                 // Digital Tuning Register 2 (For PAC size and RXPRF)
+    uint32_t drx_pretoc;                // Preamble detection timeout count (Unit: PAC)
+    uint32_t drx_sfdtoc;                // SFD detection timeout count (Default: 4096 + 64 + 1 symbols)
+};
 
-    if (dw1000_short_indexed_write(DW1000_DRX_CONF, DW1000_DRX_TUNE2, &cfg.drx_tune2, sizeof(cfg.drx_tune2)))
+int dw1000_set_rx_para(struct dw1000_rx_para *cfg)
+{
+    union dw1000_sub_reg_drx_tune2 drx_tune2;
+
+    drx_tune2.value = cfg->drx_tune2;
+
+    if (dw1000_short_indexed_write(DW1000_DRX_CONF, DW1000_DRX_TUNE2, &drx_tune2, sizeof(drx_tune2)))
         goto err;
 
     return 0;
@@ -388,17 +402,6 @@ err:
     return -1;
 }
 
-struct dw1000_tx_para
-{
-    uint16_t tflen;                     // Transmit Frame Length (Data Length)
-    enum dw1000_txbr_sel txbr_sel;      // Data Rate
-    enum dw1000_txprf_sel txprf_sel;    // PRF
-    enum dw1000_txpsr_sel txpsr_sel;    // Preamble Length
-    uint16_t buf_ofs;                   // Transmit buffer index offset
-    uint8_t ifs_delay;                  // Inter-Frame Spacing (Delay)
-    uint32_t dx_time;
-};
-
 int dw1000_set_tx_parameters(struct dw1000_tx_para *cfg)
 {
     union dw1000_reg_tx_fctrl tx_fctrl;
@@ -408,22 +411,24 @@ int dw1000_set_tx_parameters(struct dw1000_tx_para *cfg)
     tx_fctrl.ofs_00.value = 0;
     tx_fctrl.ofs_04.value = 0;
 
-    tx_fctrl.ofs_00.tflen   = cfg->tflen & 0x7f;
-    // tx_fctrl.ofs_00.tfle    = (cfg->tflen >> 7) & 0x7;
-    // tx_fctrl.ofs_00.r       = 0;
-    tx_fctrl.ofs_00.txbr    = cfg->txbr_sel;
-    tx_fctrl.ofs_00.txprf   = cfg->txprf_sel;
-    tx_fctrl.ofs_00.txpsr   = cfg->txpsr_sel & 0x3;
-    // tx_fctrl.ofs_00.pe      = (cfg->txpsr_sel >> 2) & 0x3;
-    // tx_fctrl.ofs_00.txboffs = cfg->buf_ofs & 0x3ff;
+    tx_fctrl.ofs_00.tflen    = cfg->tflen & 0x7f;
+    // tx_fctrl.ofs_00.tfle     = (cfg->tflen >> 7) & 0x7;
+    // tx_fctrl.ofs_00.r        = 0;
+    tx_fctrl.ofs_00.txbr     = cfg->txbr_sel;
+    tx_fctrl.ofs_00.txprf    = cfg->txprf_sel;
+    tx_fctrl.ofs_00.txpsr    = cfg->txpsr_sel & 0x3;
+    // tx_fctrl.ofs_00.pe       = (cfg->txpsr_sel >> 2) & 0x3;
+    // tx_fctrl.ofs_00.txboffs  = cfg->buf_ofs & 0x3ff;
     // tx_fctrl.ofs_04.ifsdelay = cfg->ifs_delay;
 
     if (dw1000_non_indexed_write(DW1000_TX_FCTRL, &tx_fctrl, sizeof(tx_fctrl)))
         goto err;
 
-    // union dw1000_reg_tx_time_stamp
-
-    if (dw1000_non_indexed_write(DW1000_TX_FCTRL, &tx_fctrl, sizeof(tx_fctrl)))
+    union dw1000_reg_dx_time dx_time = {
+        .dx_time_l = (uint32_t)(cfg->dx_time),
+        .dx_time_h = (cfg->dx_time >> 32) & 0xFF,
+    };
+    if (dw1000_non_indexed_write(DW1000_DX_TIME, &dx_time, sizeof(dx_time)))
         goto err;
 
     return 0;
@@ -434,8 +439,6 @@ err:
 
 int dw1000_set_tx_parameters2(struct dw1000_tx_para *cfg)
 {
-
-
     return 0;
 err:
     printf("%s failed\n", __FUNCTION__);
@@ -450,13 +453,14 @@ int dw1000_transmit_message(struct dw1000_tx_para *cfg, void *buf, size_t len)
     dw1000_prepare_tx_buffer(buf, len);
     dw1000_set_tx_parameters(cfg);
 
-    union dw1000_reg_sys_ctrl sys_ctrl;
-    // if (dw1000_non_indexed_read(DW1000_SYS_CTRL, &sys_ctrl, sizeof(sys_ctrl)))
-    //     goto err;
-    sys_ctrl.value = 0;
+    union dw1000_reg_sys_ctrl sys_ctrl = {
+        .value = 0,
+    };
+
     // sys_ctrl.sfcst = 0;
     sys_ctrl.txstrt = 1;
-    // sys_ctrl.txdlys = 1;
+    if (cfg->dx_time)
+        sys_ctrl.txdlys = 1;
     // sys_ctrl.cansfcs = 0;
     // sys_ctrl.txoff = 0;
     // sys_ctrl.wait4resp = 1;
@@ -511,18 +515,16 @@ void dw1000_spi_master_test()
 {
     printf("%s\n", __FUNCTION__);
 
-    int ret;
     struct spi_cfg cfg = {
         .spi = SPI_INST,
         .spi_speed = SPI_SPEED,
         .slave_mode = false,
     };
-    ret = driver_dw1000_spi_init(&cfg);
-    if (ret < 0)
+
+    if (driver_dw1000_spi_init(&cfg) < 0)
         return;
 
-    ret = dw1000_reg_list_check();
-    if (ret < 0)
+    if (dw1000_reg_list_check() < 0)
         return;
 
     uint8_t tx_buf[BUF_SIZE], rx_buf[BUF_SIZE];
@@ -537,8 +539,7 @@ void dw1000_spi_master_test()
                 continue;
 
             memset(rx_buf, 0, reg->length);
-            ret = dw1000_non_indexed_read(reg->reg_file_id, rx_buf, reg->length);
-            if (ret < 0) {
+            if (dw1000_non_indexed_read(reg->reg_file_id, rx_buf, reg->length)) {
                 printf("%s failed\n", __FUNCTION__);
                 return;
             }
@@ -564,9 +565,15 @@ void dw1000_spi_master_test()
                 tx_buf[5] = 0x3a;
                 tx_buf[6] = 0x66;
                 tx_buf[7] = 0xdc;
-                dw1000_non_indexed_write(reg->reg_file_id, tx_buf, reg->length);
+                if (dw1000_non_indexed_write(reg->reg_file_id, tx_buf, reg->length)) {
+                    printf("%s failed\n", __FUNCTION__);
+                    return;
+                }
                 memset(rx_buf, 0, reg->length);
-                dw1000_non_indexed_read(reg->reg_file_id, rx_buf, reg->length);
+                if (dw1000_non_indexed_read(reg->reg_file_id, rx_buf, reg->length)) {
+                    printf("%s failed\n", __FUNCTION__);
+                    return;
+                }
                 print_buf(rx_buf, reg->length, "%s (%02xh)\n", reg->desc, reg->reg_file_id);
                 break;
 
@@ -648,12 +655,11 @@ void dw1000_spi_master_test()
 
             case DW1000_DIG_DIAG:
                 for (struct dw1000_reg *sub_reg = dw1000_dig_diag_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
-                    if (((sub_reg->reg_file_type != DW1000_RO) && (sub_reg->reg_file_type != DW1000_RW)) || (sub_reg->length > 64) || (sub_reg->length == 0))
+                    if ((sub_reg->length > 64) || (sub_reg->length == 0))
                         continue;
 
                     memset(rx_buf, 0, sub_reg->length);
-                    ret = dw1000_short_indexed_read(DW1000_DIG_DIAG, sub_reg->reg_file_id, rx_buf, sub_reg->length);
-                    if (ret < 0) {
+                    if (dw1000_short_indexed_read(DW1000_DIG_DIAG, sub_reg->reg_file_id, rx_buf, sub_reg->length)) {
                         printf("%s failed\n", __FUNCTION__);
                         return;
                     }

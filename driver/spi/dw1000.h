@@ -313,12 +313,11 @@ union dw1000_reg_tx_fctrl
 
 // Register file: 0x0A – Delayed Send or Receive Time
 union dw1000_reg_dx_time
-{
-    uint8_t dx_time[5];                 // Delayed Send or Receive Time (40-bit)
+{               
     struct
     {
-        uint32_t dx_time_l;
-        uint8_t dx_time_h;
+        uint32_t dx_time_l;             // Delayed Send or Receive Time (40-bit)
+        uint8_t dx_time_h;              // Delayed Send or Receive Time (40-bit)
     };
     uint8_t value[5];
 };
