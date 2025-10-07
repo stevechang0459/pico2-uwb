@@ -359,23 +359,55 @@ struct dw1000_tx_para
     enum dw1000_txpsr_sel txpsr_sel;    // Preamble Length
     uint16_t buf_ofs;                   // Transmit buffer index offset
     uint8_t ifs_delay;                  // Inter-Frame Spacing (Delay)
-    uint64_t dx_time;                   // Delayed Send or Receive Time (Unit: 15.65 picoseconds)
+    uint64_t txdlys;                    // Delayed Send Time (Unit: 15.65 picoseconds)
+    uint64_t rxdlye;                    // Delayed Receive Time (Unit: 15.65 picoseconds)
 };
 
 struct dw1000_rx_para
 {
-    uint32_t drx_tune2;                 // Digital Tuning Register 2 (For PAC size and RXPRF)
-    uint32_t drx_pretoc;                // Preamble detection timeout count (Unit: PAC)
+    uint32_t drx_tune2;                 // Digital Tuning Register 2 (for PAC size and RXPRF)
+    uint32_t drx_pretoc;                // Preamble detection timeout count (in units of PAC size symbols)
     uint32_t drx_sfdtoc;                // SFD detection timeout count (Default: 4096 + 64 + 1 symbols)
+    uint64_t rxdlye;                    // Delayed Receive Time (Unit: 15.65 picoseconds)
 };
 
 int dw1000_set_rx_para(struct dw1000_rx_para *cfg)
 {
-    union dw1000_sub_reg_drx_tune2 drx_tune2;
+    if (cfg->rxdlye) {
+        union dw1000_reg_dx_time dx_time = {
+            .dx_time_l = (uint32_t)(cfg->rxdlye),
+            .dx_time_h = (cfg->rxdlye >> 32) & 0xFF,
+        };
+        if (dw1000_non_indexed_write(DW1000_DX_TIME, &dx_time, sizeof(dx_time)))
+            goto err;
+    }
 
-    drx_tune2.value = cfg->drx_tune2;
-
+    union dw1000_sub_reg_drx_tune2 drx_tune2 = {
+        .drx_tun2 = cfg->drx_tune2,
+    };
     if (dw1000_short_indexed_write(DW1000_DRX_CONF, DW1000_DRX_TUNE2, &drx_tune2, sizeof(drx_tune2)))
+        goto err;
+
+    union dw1000_sub_reg_drx_pretoc drx_pretoc = {
+        .drx_pretoc = cfg->drx_pretoc,
+    };
+    if (dw1000_short_indexed_write(DW1000_DRX_CONF, DW1000_DRX_PRETOC, &drx_pretoc, sizeof(drx_pretoc)))
+        goto err;
+
+    union dw1000_reg_sys_ctrl sys_ctrl = {
+        .value = 0,
+    };
+    // sys_ctrl.sfcst = 0;
+    // sys_ctrl.txstrt = 1;
+    // if (cfg->txdlys)
+    //     sys_ctrl.txdlys = 1;
+    sys_ctrl.rxenab = 1;
+    if (cfg->rxdlye)
+        sys_ctrl.rxdlye = 1;
+    // sys_ctrl.cansfcs = 0;
+    // sys_ctrl.txoff = 0;
+    // sys_ctrl.wait4resp = 1;
+    if (dw1000_non_indexed_write(DW1000_SYS_CTRL, &sys_ctrl, sizeof(sys_ctrl)))
         goto err;
 
     return 0;
@@ -404,12 +436,12 @@ err:
 
 int dw1000_set_tx_parameters(struct dw1000_tx_para *cfg)
 {
-    union dw1000_reg_tx_fctrl tx_fctrl;
+    union dw1000_reg_tx_fctrl tx_fctrl = {
+        .ofs_00.value = 0,
+        .ofs_04.value = 0,
+    };
     // if (dw1000_non_indexed_read(DW1000_TX_FCTRL, &tx_fctrl, sizeof(tx_fctrl)))
     //     goto err;
-
-    tx_fctrl.ofs_00.value = 0;
-    tx_fctrl.ofs_04.value = 0;
 
     tx_fctrl.ofs_00.tflen    = cfg->tflen & 0x7f;
     // tx_fctrl.ofs_00.tfle     = (cfg->tflen >> 7) & 0x7;
@@ -424,12 +456,14 @@ int dw1000_set_tx_parameters(struct dw1000_tx_para *cfg)
     if (dw1000_non_indexed_write(DW1000_TX_FCTRL, &tx_fctrl, sizeof(tx_fctrl)))
         goto err;
 
-    union dw1000_reg_dx_time dx_time = {
-        .dx_time_l = (uint32_t)(cfg->dx_time),
-        .dx_time_h = (cfg->dx_time >> 32) & 0xFF,
-    };
-    if (dw1000_non_indexed_write(DW1000_DX_TIME, &dx_time, sizeof(dx_time)))
-        goto err;
+    if (cfg->txdlys) {
+        union dw1000_reg_dx_time dx_time = {
+            .dx_time_l = (uint32_t)(cfg->txdlys),
+            .dx_time_h = (cfg->txdlys >> 32) & 0xFF,
+        };
+        if (dw1000_non_indexed_write(DW1000_DX_TIME, &dx_time, sizeof(dx_time)))
+            goto err;
+    }
 
     return 0;
 err:
@@ -459,7 +493,7 @@ int dw1000_transmit_message(struct dw1000_tx_para *cfg, void *buf, size_t len)
 
     // sys_ctrl.sfcst = 0;
     sys_ctrl.txstrt = 1;
-    if (cfg->dx_time)
+    if (cfg->txdlys)
         sys_ctrl.txdlys = 1;
     // sys_ctrl.cansfcs = 0;
     // sys_ctrl.txoff = 0;

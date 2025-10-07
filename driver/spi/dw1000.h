@@ -313,7 +313,7 @@ union dw1000_reg_tx_fctrl
 
 // Register file: 0x0A – Delayed Send or Receive Time
 union dw1000_reg_dx_time
-{               
+{
     struct
     {
         uint32_t dx_time_l;             // Delayed Send or Receive Time (40-bit)
@@ -432,7 +432,16 @@ union dw1000_reg_rx_time
 {
     struct
     {
-        uint8_t rx_time[14];
+        uint32_t rx_stamp_l;            // The fully adjusted time of reception (low 32 bits of 40-bit value).
+        //
+        uint32_t rx_stamp_h : 8;        // The fully adjusted time of reception (high 8 bits of 40-bit value).
+        uint32_t fp_index   : 16;       // First path index.
+        uint32_t fp_ampl1_l : 8;        // First Path Amplitude point 1 (low 8 bits of 16-bit value).
+        //
+        uint32_t fp_ampl1_h : 8;        // First Path Amplitude point 1 (high 8 bits of 16-bit value).
+        uint32_t rx_rawst_l : 24;       // The Raw Timestamp for the frame (low 24 bits of 40-bit value).
+        //
+        uint16_t rx_rawst_h;            // The Raw Timestamp for the frame (high 16 bits of 40-bit value).
     };
     uint8_t value[14];
 };
@@ -444,10 +453,10 @@ union dw1000_reg_tx_time_stamp
 {
     struct
     {
-        uint32_t tx_stamp_l;            // This 40-bit (5-octet) field reports the fully adjusted time of transmission.
-        uint32_t tx_stamp_h : 8;        // This 40-bit (5-octet) field reports the fully adjusted time of transmission.
-        uint32_t tx_rawst_l : 24;       // This 40-bit (5-octet) field reports the Raw Timestamp for the frame.
-        uint16_t tx_rawst_h;            // This 40-bit (5-octet) field reports the Raw Timestamp for the frame.
+        uint32_t tx_stamp_l;            // The fully adjusted time of transmission (low 32 bits of 40-bit value).
+        uint32_t tx_stamp_h : 8;        // The fully adjusted time of transmission (high 8 bits of 40-bit value).
+        uint32_t tx_rawst_l : 24;       // The Raw Timestamp for the frame (low 24 bits of 40-bit value).
+        uint16_t tx_rawst_h;            // The Raw Timestamp for the frame (high 16 bits of 40-bit value).
     };
     uint8_t value[10];
 };
@@ -490,6 +499,14 @@ union dw1000_reg_tx_antd
 
 // Register file: 0x26 – GPIO control and status
 
+// Sub-Register 0x27:00 – DRX_RES1
+
+// Sub-Register 0x27:02 – DRX_TUNE0b
+
+// Sub-Register 0x27:04 – DRX_TUNE1a
+
+// Sub-Register 0x27:06 – DRX_TUNE1b
+
 // Sub-Register 0x27:08 – DRX_TUNE2
 union dw1000_sub_reg_drx_tune2
 {
@@ -512,19 +529,123 @@ enum drx_tune2_value
     PAC_64_PRF_64MHZ = 0x373B0296,
 };
 
+// Sub-Register 0x27:0C – DRX_RES2
+
+// Sub-Register 0x27:20 – DRX_SFDTOC
+
+// Sub-Register 0x27:22 – DRX_RES3
+
+// Sub-Register 0x27:24 – DRX_PRETOC
+union dw1000_sub_reg_drx_pretoc
+{
+    struct
+    {
+        uint16_t drx_pretoc;            // Preamble detection timeout count (in units of PAC size symbols)
+    };
+    uint16_t value;
+};
+
+// Sub-Register 0x27:26 – DRX_TUNE4H
+
+// Sub-Register 0x27:28 – DRX_CAR_INT
+
+// Sub-Register 0x27:2C – RXPACC_NOSAT
+
 // Register file: 0x27 – Digital receiver configuration
+
+// Sub-Register 0x28:00 – RF_CONF
+
+// Sub-Register 0x28:04 – RF_RES1
+
+// Sub-Register 0x28:0B – RF_RXCTRLH
+
+// Sub-Register 0x28:0C – RF_TXCTRL
+
+// Sub-Register 0x28:10 – RF_RES2
+
+// Sub-Register 0x28:2C – RF_STATUS
+
+// Sub-Register 0x28:30 – LDOTUNE
 
 // Register file: 0x28 – Analog RF configuration block
 
 // Register file: 0x29 – Reserved
 
+// Sub-Register 0x2A:00 – TC_SARC
+
+// Sub-Register 0x2A:03 – TC_SARL
+
+// Sub-Register 0x2A:06 – TC_SARW
+
+// Sub-Register 0x2A:08 – TC_PG_CTRL
+
+// Sub-Register 0x2A:09 – TC_PG_STATUS
+
+// Sub-Register 0x2A:0B – TC_PGDELAY
+
+// Sub-Register 0x2A:0C – TC_PGTEST
+
 // Register file: 0x2A – Transmitter Calibration block
+
+// Sub-Register 0x2B:00 – FS_RES1
+
+// Sub-Register 0x2B:07 – FS_PLLCFG
+
+// Sub-Register 0x2B:0B – FS_PLLTUNE
+
+// Sub-Register 0x2B:0C – FS_RES2
+
+// Sub-Register 0x2B:0E – FS_XTALT
+
+// Sub-Register 0x2B:0F – FS_RES3
 
 // Register file: 0x2B – Frequency synthesiser control block
 
+// Sub-Register 0x2C:00 – AON_WCFG
+
+// Sub-Register 0x2C:02 – AON_CTRL
+
+// Sub-Register 0x2C:03 – AON_RDAT
+
+// Sub-Register 0x2C:04 – AON_ADDR
+
+// Sub-Register 0x2C:05 – AON_RES1
+
+// Sub-Register 0x2C:06 – AON_CFG0
+
+// Sub-Register 0x2C:0A – AON_CFG1
+
 // Register file: 0x2C – Always-on system control interface
 
+// Sub-Register 0x2D:00 – OTP_WDAT
+
+// Sub-Register 0x2D:04 – OTP_ADDR
+
+// Sub-Register 0x2D:06 – OTP_CTRL
+
+// Sub-Register 0x2D:08 – OTP_STAT
+
+// Sub-Register 0x2D:0A – OTP_RDAT
+
+// Sub-Register 0x2D:0E – OTP_SRDAT
+
+// Sub-Register 0x2D:12 – OTP_SF
+
 // Register file: 0x2D – OTP Memory Interface
+
+// Sub-Register 0x2E:0000 – LDE_THRESH
+
+// Sub-Register 0x2E:0806 – LDE_CFG1
+
+// Sub-Register 0x2E:1000 – LDE_PPINDX
+
+// Sub-Register 0x2E:1002 – LDE_PPAMPL
+
+// Sub-Register 0x2E:1804 – LDE_RXANTD
+
+// Sub-Register 0x2E:1806 – LDE_CFG2
+
+// Sub-Register 0x2E:2804 – LDE_REPC
 
 // Register file: 0x2E – Leading Edge Detection Interface
 
