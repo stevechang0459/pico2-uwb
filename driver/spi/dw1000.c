@@ -10,6 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <math.h>
+#include <float.h>
+
 static struct dw1000_reg dw1000_regs[] =
 {
     {.reg_file_id = DW1000_DEV_ID,      .length = 4,    .reg_file_type = DW1000_RO,  .mnemonic = "DEV_ID",     .desc = "Device Identifier"},
@@ -118,7 +121,9 @@ int dw1000_non_indexed_read(uint8_t reg_file_id, void *buf, size_t len)
     memset(m_rx_buf, 0, num_bytes);
     memset(m_tx_buf, 0, num_bytes);
     m_tx_buf[0] = header.value;
-
+    
+    // t9: Last SPICLK to SPICSn de-asserted, 40 ns
+    // sleep_us(1);
     cs_select(SPI0_CSN);
     int num_written = spi_write_read_blocking(SPI_BUS, m_tx_buf, m_rx_buf, num_bytes);
     if (num_written != num_bytes) {
@@ -152,6 +157,8 @@ int dw1000_non_indexed_write(uint8_t reg_file_id, void *buf, size_t len)
     m_tx_buf[0] = header.value;
     memcpy(m_tx_buf + 1, buf, len);
 
+    // t9: Last SPICLK to SPICSn de-asserted, 40 ns
+    // sleep_us(1);
     cs_select(SPI0_CSN);
     int num_written = spi_write_blocking(SPI_BUS, m_tx_buf, num_bytes);
     if (num_written != num_bytes) {
@@ -187,6 +194,8 @@ int dw1000_short_indexed_read(uint8_t reg_file_id, uint8_t sub_addr, void *buf, 
     m_tx_buf[0] = header.value[0];
     m_tx_buf[1] = header.value[1];
 
+    // t9: Last SPICLK to SPICSn de-asserted, 40 ns
+    // sleep_us(1);
     cs_select(SPI0_CSN);
     int num_written = spi_write_read_blocking(SPI_BUS, m_tx_buf, m_rx_buf, num_bytes);
     if (num_written != num_bytes) {
@@ -222,6 +231,8 @@ int dw1000_short_indexed_write(uint8_t reg_file_id, uint8_t sub_addr, void *buf,
     m_tx_buf[0] = header.value[0];
     m_tx_buf[1] = header.value[1];
 
+    // t9: Last SPICLK to SPICSn de-asserted, 40 ns
+    // sleep_us(1);
     cs_select(SPI0_CSN);
     int num_written = spi_write_blocking(SPI_BUS, m_tx_buf, num_bytes);
     if (num_written != num_bytes) {
@@ -259,6 +270,8 @@ int dw1000_long_indexed_read(uint8_t reg_file_id, uint16_t sub_addr, void *buf, 
     m_tx_buf[1] = header.value[1];
     m_tx_buf[2] = header.value[2];
 
+    // t9: Last SPICLK to SPICSn de-asserted, 40 ns
+    // sleep_us(1);
     cs_select(SPI0_CSN);
     int num_written = spi_write_read_blocking(SPI_BUS, m_tx_buf, m_rx_buf, num_bytes);
     if (num_written != num_bytes) {
@@ -296,6 +309,8 @@ int dw1000_long_indexed_write(uint8_t reg_file_id, uint16_t sub_addr, void *buf,
     m_tx_buf[1] = header.value[1];
     m_tx_buf[2] = header.value[2];
 
+    // t9: Last SPICLK to SPICSn de-asserted, 40 ns
+    // sleep_us(1);
     cs_select(SPI0_CSN);
     int num_written = spi_write_blocking(SPI_BUS, m_tx_buf, num_bytes);
     if (num_written != num_bytes) {
@@ -341,38 +356,83 @@ err:
     return -1;
 }
 
-struct dw1000_tx_para
+struct dw1000_trx_para
 {
+    uint8_t tx_chan;                    // Transmit channel
+    uint8_t rx_chan;                    // Receive channel
+    uint8_t tx_pcode;                   // Preamble code used in the transmitter
+    uint8_t rx_pcode;                   // Preamble code used in the receiver
     uint16_t tflen;                     // Transmit Frame Length (Data Length)
-    enum dw1000_txbr_sel txbr_sel;      // Data Rate
-    enum dw1000_txprf_sel txprf_sel;    // PRF
-    enum dw1000_txpsr_sel txpsr_sel;    // Preamble Length
+    enum dw1000_br_sel txbr_sel;        // Data Rate
+    enum dw1000_prf_sel txprf_sel;      // PRF
+    enum dw1000_psr_sel txpsr_sel;      // Preamble Length
+    enum dw1000_br_sel rxbr_sel;        // Data Rate
+    enum dw1000_prf_sel rxprf_sel;      // PRF
+    enum dw1000_psr_sel rxpsr_sel;      // Preamble Length
     uint16_t buf_ofs;                   // Transmit buffer index offset
     uint8_t ifs_delay;                  // Inter-Frame Spacing (Delay)
     uint64_t txdlys;                    // Delayed Send Time (Unit: 15.65 picoseconds)
-    uint64_t rxdlye;                    // Delayed Receive Time (Unit: 15.65 picoseconds)
-};
-
-struct dw1000_rx_para
-{
+    //
     uint32_t drx_tune2;                 // Digital Tuning Register 2 (for PAC size and RXPRF)
     uint32_t drx_pretoc;                // Preamble detection timeout count (in units of PAC size symbols)
     uint32_t drx_sfdtoc;                // SFD detection timeout count (Default: 4096 + 64 + 1 symbols)
     uint64_t rxdlye;                    // Delayed Receive Time (Unit: 15.65 picoseconds)
 };
 
-int dw1000_init()
+int dw1000_sniff_mode_init(uint8_t type)
+{
+
+}
+
+int dw1000_init(struct dw1000_trx_para *cfg)
 {
     union dw1000_reg_sys_cfg sys_cfg = {
         // Disable Double-Buffered
-        // .dis_drxb = 1,
-        // .rxautr   = 0,
-        // Enable Double-Buffered
-        .dis_drxb = 0,
-        .rxautr   = 1,
+        .dis_drxb = 1,
+        .rxautr   = 0,
+        // // Enable Double-Buffered
+        // .dis_drxb = 0,
+        // .rxautr   = 1,
     };
     if (dw1000_non_indexed_write(DW1000_SYS_CFG, &sys_cfg, sizeof(sys_cfg)))
         goto err;
+
+    union dw1000_reg_chan_ctrl chan_ctrl = {
+        .tx_chan  = cfg->tx_chan,
+        .rx_chan  = cfg->rx_chan,
+        .rxprf    = cfg->rxprf_sel,
+        .tx_pcode = cfg->tx_pcode,
+        .rx_pcode = cfg->rx_pcode,
+    };
+    assert(cfg->tx_chan == cfg->rx_chan);
+    assert((cfg->rxprf_sel == DW1000_PRF_16MHZ) || (cfg->rxprf_sel == DW1000_PRF_64MHZ));
+    assert(cfg->tx_pcode == cfg->rx_pcode);
+    if (dw1000_non_indexed_write(DW1000_CHAN_CTRL, &chan_ctrl, sizeof(chan_ctrl)))
+        goto err;
+
+    return 0;
+err:
+    printf("%s failed\n", __FUNCTION__);
+    return -1;
+}
+
+/**
+ * @brief Estimating the signal power in the first path.
+ */
+int dw1000_cal_first_path_power_level(struct dw1000_trx_para *cfg)
+{
+    union dw1000_reg_rx_time rx_time = {0};
+    if (dw1000_non_indexed_read(DW1000_RX_TIME, &rx_time, sizeof(rx_time)))
+        goto err;
+
+    union dw1000_reg_rx_fqual rx_fqual = {0};
+    if (dw1000_non_indexed_read(DW1000_RX_FQUAL, &rx_fqual, sizeof(rx_fqual)))
+        goto err;
+
+    uint16_t f1 = (uint16_t)rx_time.ofs_08.fp_ampl1_h << 8 | (uint16_t)rx_time.ofs_04.fp_ampl1_l;
+    uint16_t f2 = rx_fqual.ofs_00.fp_ampl2;
+    uint16_t f3 = rx_fqual.ofs_04.fp_ampl3;
+    float a = (cfg->rxprf_sel == DW1000_PRF_16MHZ ? 113.77 : 121.74);
 
     return 0;
 err:
@@ -412,7 +472,7 @@ err:
     return -1;
 }
 
-int dw1000_set_rx_parameters(struct dw1000_rx_para *cfg)
+int dw1000_set_rx_parameters(struct dw1000_trx_para *cfg)
 {
     if (cfg->rxdlye) {
         union dw1000_reg_dx_time dx_time = {
@@ -474,7 +534,7 @@ err:
     return -1;
 }
 
-int dw1000_set_tx_parameters(struct dw1000_tx_para *cfg)
+int dw1000_set_tx_parameters(struct dw1000_trx_para *cfg)
 {
     union dw1000_reg_tx_fctrl tx_fctrl = {
         .ofs_00.value = 0,
@@ -511,7 +571,7 @@ err:
     return -1;
 }
 
-int dw1000_set_tx_parameters2(struct dw1000_tx_para *cfg)
+int dw1000_set_tx_parameters2(struct dw1000_trx_para *cfg)
 {
     return 0;
 err:
@@ -519,7 +579,7 @@ err:
     return -1;
 }
 
-int dw1000_transmit_message(struct dw1000_tx_para *cfg, void *buf, size_t len)
+int dw1000_transmit_message(struct dw1000_trx_para *cfg, void *buf, size_t len)
 {
     if ((cfg == NULL) || (buf == NULL) || (cfg->tflen > 1023) || (cfg->tflen != len + 2))
         goto err;

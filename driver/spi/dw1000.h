@@ -138,14 +138,57 @@ enum dw1000_spi_operation
 
 enum uwb_frame_type
 {
-    UWB_BEACON_FRAME = 0,
-    UWB_DATA_FRAME = 1,
-    UWB_ACK_FRAME = 2,
+    UWB_BEACON_FRAME  = 0,
+    UWB_DATA_FRAME    = 1,
+    UWB_ACK_FRAME     = 2,
     UWB_MAC_CMD_FRAME = 3,
-    UWB_RSVD_FRAME1 = 4,
-    UWB_RSVD_FRAME2 = 5,
-    UWB_RSVD_FRAME3 = 6,
-    UWB_RSVD_FRAME4 = 7,
+    UWB_RSVD_FRAME1   = 4,
+    UWB_RSVD_FRAME2   = 5,
+    UWB_RSVD_FRAME3   = 6,
+    UWB_RSVD_FRAME4   = 7,
+};
+
+// Bit Rate Selection (Data Rate)
+enum dw1000_br_sel
+{
+    DW1000_BR_110KBPS  = 0,
+    DW1000_BR_850KBPS  = 1,
+    DW1000_BR_6800KBPS = 2,
+    DW1000_BR_RSVD     = 3,
+};
+
+// Pulse Repetition Frequency Selection (PRF)
+enum dw1000_prf_sel
+{
+    DW1000_PRF_4MHZ  = 0,
+    DW1000_PRF_16MHZ = 1,
+    DW1000_PRF_64MHZ = 2,
+    DW1000_PRF_RSVD  = 3,
+};
+
+// Preamble Symbol Repetitions Selection (Preamble Length)
+enum dw1000_psr_sel
+{
+    DW1000_PSR_64   = 0x1,  // The standard preamble length for the 802.15.4 UWB PHY
+    DW1000_PSR_128  = 0x5,
+    DW1000_PSR_256  = 0x9,
+    DW1000_PSR_512  = 0xd,
+    DW1000_PSR_1024 = 0x2,  // The standard preamble length for the 802.15.4 UWB PHY
+    DW1000_PSR_1536 = 0x6,
+    DW1000_PSR_2048 = 0xa,
+    DW1000_PSR_4096 = 0x3,  // The standard preamble length for the 802.15.4 UWB PHY
+};
+
+enum drx_tune2_value
+{
+    DW1000_PAC_8_PRF_16MHZ  = 0x311A002D,
+    DW1000_PAC_8_PRF_64MHZ  = 0x313B006B,
+    DW1000_PAC_16_PRF_16MHZ = 0x331A0052,
+    DW1000_PAC_16_PRF_64MHZ = 0x333B00BE,
+    DW1000_PAC_32_PRF_16MHZ = 0x351A009A,
+    DW1000_PAC_32_PRF_64MHZ = 0x353B015E,
+    DW1000_PAC_64_PRF_16MHZ = 0x371A011D,
+    DW1000_PAC_64_PRF_64MHZ = 0x373B0296,
 };
 
 #pragma push
@@ -259,43 +302,12 @@ union dw1000_reg_tx_fctrl_08_00
     uint32_t value;
 };
 
-// Transmit Bit Rate Selection (Data Rate)
-enum dw1000_txbr_sel
-{
-    TXBR_110KBPS  = 0,
-    TXBR_850KBPS  = 1,
-    TXBR_6800KBPS = 2,
-    TXBR_RSVD     = 3,
-};
-
-// Transmit Pulse Repetition Frequency Selection (PRF)
-enum dw1000_txprf_sel
-{
-    TXPRF_4MHZ  = 0,
-    TXPRF_16MHZ = 1,
-    TXPRF_64MHZ = 2,
-    TXPRF_RSVD  = 3,
-};
-
-// Transmit Preamble Symbol Repetitions Selection (Preamble Length)
-enum dw1000_txpsr_sel
-{
-    TXPSR_64   = 0x1,  // The standard preamble length for the 802.15.4 UWB PHY
-    TXPSR_128  = 0x5,
-    TXPSR_256  = 0x9,
-    TXPSR_512  = 0xd,
-    TXPSR_1024 = 0x2,  // The standard preamble length for the 802.15.4 UWB PHY
-    TXPSR_1536 = 0x6,
-    TXPSR_2048 = 0xa,
-    TXPSR_4096 = 0x3,  // The standard preamble length for the 802.15.4 UWB PHY
-};
-
 // REG:08:04 – TX_FCTRL – Transmit Frame Control (Octet 4, 8-bits)
 union dw1000_reg_tx_fctrl_08_04
 {
     struct
     {
-        uint8_t ifsdelay : 8;           // Inter-Frame Spacing
+        uint8_t ifsdelay : 8;           // Inter-Frame Spacing.
     };
     uint8_t value;
 };
@@ -316,8 +328,8 @@ union dw1000_reg_dx_time
 {
     struct
     {
-        uint32_t dx_time_l;             // Delayed Send or Receive Time (40-bit)
-        uint8_t dx_time_h;              // Delayed Send or Receive Time (40-bit)
+        uint32_t dx_time_l;             // Delayed Send or Receive Time (40-bit).
+        uint8_t dx_time_h;              // Delayed Send or Receive Time (40-bit).
     };
     uint8_t value[5];
 };
@@ -331,20 +343,20 @@ union dw1000_reg_sys_ctrl
 {
     struct
     {
-        uint32_t sfcst     : 1;         // Suppress auto-FCS Transmission (on this next frame)
-        uint32_t txstrt    : 1;         // Transmit Start
-        uint32_t txdlys    : 1;         // Transmitter Delayed Sending
-        uint32_t cansfcs   : 1;         // Cancel Suppression of auto-FCS transmission (on the current frame)
-        uint32_t rsvd1     : 2;         // Reserved
-        uint32_t trxoff    : 1;         // Transceiver Off
-        uint32_t wait4resp : 1;         // Wait for Response
+        uint32_t sfcst     : 1;         // Suppress auto-FCS Transmission (on this next frame).
+        uint32_t txstrt    : 1;         // Transmit Start.
+        uint32_t txdlys    : 1;         // Transmitter Delayed Sending.
+        uint32_t cansfcs   : 1;         // Cancel Suppression of auto-FCS transmission (on the current frame).
+        uint32_t rsvd1     : 2;         // Reserved.
+        uint32_t trxoff    : 1;         // Transceiver Off.
+        uint32_t wait4resp : 1;         // Wait for Response.
         //
-        uint32_t rxenab    : 1;         // Enable Receiver
-        uint32_t rxdlye    : 1;         // Receiver Delayed Enable
-        uint32_t rsvd2     : 14;        // Reserved
+        uint32_t rxenab    : 1;         // Enable Receiver.
+        uint32_t rxdlye    : 1;         // Receiver Delayed Enable.
+        uint32_t rsvd2     : 14;        // Reserved.
         //
-        uint32_t hrbpt     : 1;         // Host Side Receive Buffer Pointer Toggle
-        uint32_t rsvd3     : 7;         // Reserved
+        uint32_t hrbpt     : 1;         // Host Side Receive Buffer Pointer Toggle.
+        uint32_t rsvd3     : 7;         // Reserved.
     };
     uint32_t value;
 };
@@ -354,41 +366,41 @@ union dw1000_reg_sys_status_0f_00
 {
     struct
     {
-        uint32_t irqs      : 1;         // Interrupt Request Status.
-        uint32_t cplock    : 1;         // Clock PLL Lock
-        uint32_t esyncr    : 1;         // External Sync Clock Reset
-        uint32_t aat       : 1;         // Automatic Acknowledge Trigger
-        uint32_t txfrb     : 1;         // Transmit Frame Begins
-        uint32_t txprs     : 1;         // Transmit Preamble Sent
-        uint32_t txphs     : 1;         // bit[6] Transmit PHY Header Sent
-        uint32_t txfrs     : 1;         // Transmit Frame Sent
+        uint32_t irqs      : 1;         // Interrupt Request Status..
+        uint32_t cplock    : 1;         // Clock PLL Lock.
+        uint32_t esyncr    : 1;         // External Sync Clock Reset.
+        uint32_t aat       : 1;         // Automatic Acknowledge Trigger.
+        uint32_t txfrb     : 1;         // Transmit Frame Begins.
+        uint32_t txprs     : 1;         // Transmit Preamble Sent.
+        uint32_t txphs     : 1;         // Bit[6] Transmit PHY Header Sent.
+        uint32_t txfrs     : 1;         // Transmit Frame Sent.
         //
-        uint32_t rxprd     : 1;         // Receiver Preamble Detected status
-        uint32_t rxsfdd    : 1;         // Receiver SFD Detected
-        uint32_t ldedone   : 1;         // LDE processing done
-        uint32_t rxphd     : 1;         // Receiver PHY Header Detect
-        uint32_t rxphe     : 1;         // Receiver PHY Header Error
-        uint32_t rxdfr     : 1;         // bit[13] Receiver Data Frame Ready
-        uint32_t rxfcg     : 1;         // Receiver FCS Good
-        uint32_t rxfce     : 1;         // Receiver FCS Error
+        uint32_t rxprd     : 1;         // Receiver Preamble Detected status.
+        uint32_t rxsfdd    : 1;         // Receiver SFD Detected.
+        uint32_t ldedone   : 1;         // LDE processing done.
+        uint32_t rxphd     : 1;         // Receiver PHY Header Detect.
+        uint32_t rxphe     : 1;         // Receiver PHY Header Error.
+        uint32_t rxdfr     : 1;         // Bit[13] Receiver Data Frame Ready.
+        uint32_t rxfcg     : 1;         // Receiver FCS Good.
+        uint32_t rxfce     : 1;         // Receiver FCS Error.
         //
-        uint32_t rxrfsl    : 1;         // Receiver Reed Solomon Frame Sync Loss
-        uint32_t rxrfto    : 1;         // Receive Frame Wait Timeout
-        uint32_t ldeerr    : 1;         // Leading edge detection processing error
-        uint32_t rsvd      : 1;         // Reserved
-        uint32_t rxovrr    : 1;         // Receiver Overrun
-        uint32_t rxpto     : 1;         // Preamble detection timeout
-        uint32_t gpioirq   : 1;         // GPIO interrupt
-        uint32_t slp2init  : 1;         // SLEEP to INIT
+        uint32_t rxrfsl    : 1;         // Receiver Reed Solomon Frame Sync Loss.
+        uint32_t rxrfto    : 1;         // Receive Frame Wait Timeout.
+        uint32_t ldeerr    : 1;         // Leading edge detection processing error.
+        uint32_t rsvd      : 1;         // Reserved.
+        uint32_t rxovrr    : 1;         // Receiver Overrun.
+        uint32_t rxpto     : 1;         // Preamble detection timeout.
+        uint32_t gpioirq   : 1;         // GPIO interrupt.
+        uint32_t slp2init  : 1;         // SLEEP to INIT.
         //
-        uint32_t rfpll_ll  : 1;         // RF PLL Losing Lock
-        uint32_t clkpll_ll : 1;         // Clock PLL Losing Lock
-        uint32_t rxsfdto   : 1;         // Receive SFD timeout
-        uint32_t hpdwarn   : 1;         // Half Period Delay Warning
-        uint32_t txberr    : 1;         // Transmit Buffer Error
-        uint32_t affrej    : 1;         // Automatic Frame Filtering rejection
-        uint32_t hsrbp     : 1;         // Host Side Receive Buffer Pointer
-        uint32_t icrbp     : 1;         // IC side Receive Buffer Pointer
+        uint32_t rfpll_ll  : 1;         // RF PLL Losing Lock.
+        uint32_t clkpll_ll : 1;         // Clock PLL Losing Lock.
+        uint32_t rxsfdto   : 1;         // Receive SFD timeout.
+        uint32_t hpdwarn   : 1;         // Half Period Delay Warning.
+        uint32_t txberr    : 1;         // Transmit Buffer Error.
+        uint32_t affrej    : 1;         // Automatic Frame Filtering rejection.
+        uint32_t hsrbp     : 1;         // Host Side Receive Buffer Pointer.
+        uint32_t icrbp     : 1;         // IC side Receive Buffer Pointer.
     };
     uint32_t value;
 };
@@ -398,10 +410,10 @@ union dw1000_reg_sys_status_0f_04
 {
     struct
     {
-        uint8_t rxrscs : 1;             // Receiver Reed-Solomon Correction Status
-        uint8_t rxprej : 1;             // Receiver Preamble Rejection
-        uint8_t txpute : 1;             // Transmit power up time error
-        uint8_t rsvd   : 5;             // Reserved
+        uint8_t rxrscs : 1;             // Receiver Reed-Solomon Correction Status.
+        uint8_t rxprej : 1;             // Receiver Preamble Rejection.
+        uint8_t txpute : 1;             // Transmit power up time error.
+        uint8_t rsvd   : 5;             // Reserved.
     };
     uint8_t value;
 };
@@ -418,30 +430,144 @@ union dw1000_reg_sys_status
 };
 
 // Register file: 0x10 – RX Frame Information (in double buffer set)
+union dw1000_reg_rx_finfo
+{
+    struct
+    {
+        uint32_t rxflen : 7;            // Bit[6:0] Receive Frame Length.
+        uint32_t rxfle  : 3;            // Bit[9:7] Receive Frame Length Extension.
+        uint32_t rsvd   : 1;            // Bit[10] Reserved.
+        uint32_t rxnspl : 2;            // Bit[12:11] Receive non-standard preamble length.
+        uint32_t rxbr   : 2;            // Bit[14:13] Receive Bit Rate report.
+        uint32_t rng    : 1;            // Bit[15] Receiver Ranging.
+        uint32_t rxprfr : 2;            // Bit[17:16] RX Pulse Repetition Rate report.
+        uint32_t rxpsr  : 2;            // Bit[19:18] RX Preamble Repetition.
+        uint32_t rxpacc : 12;           // Bit[31:20] Preamble Accumulation Count.
+    };
+    uint32_t value;
+};
+
+// // Transmit Bit Rate Selection (Data Rate)
+// enum dw1000_rxbr_sel
+// {
+//     TXBR_110KBPS  = 0,
+//     TXBR_850KBPS  = 1,
+//     TXBR_6800KBPS = 2,
+//     TXBR_RSVD     = 3,
+// };
+
+// // Transmit Pulse Repetition Frequency Selection (PRF)
+// enum dw1000_rxprf_sel
+// {
+//     TXPRF_4MHZ  = 0,
+//     TXPRF_16MHZ = 1,
+//     TXPRF_64MHZ = 2,
+//     TXPRF_RSVD  = 3,
+// };
+
+// // Transmit Preamble Symbol Repetitions Selection (Preamble Length)
+// enum dw1000_rxpsr_sel
+// {
+//     TXPSR_64   = 0x1,  // The standard preamble length for the 802.15.4 UWB PHY
+//     TXPSR_128  = 0x5,
+//     TXPSR_256  = 0x9,
+//     TXPSR_512  = 0xd,
+//     TXPSR_1024 = 0x2,  // The standard preamble length for the 802.15.4 UWB PHY
+//     TXPSR_1536 = 0x6,
+//     TXPSR_2048 = 0xa,
+//     TXPSR_4096 = 0x3,  // The standard preamble length for the 802.15.4 UWB PHY
+// };
 
 // Register file: 0x11 – Receive Data (in double buffer set)
 
+union dw1000_reg_rx_fqual_12_00
+{
+    struct
+    {
+        uint32_t std_noise : 16;        // Bit[15:0] Standard Deviation of Noise.
+        uint32_t fp_ampl2  : 16;        // Bit[31:16] First Path Amplitude point 2.
+    };
+    uint32_t value;
+};
+
+union dw1000_reg_rx_fqual_12_04
+{
+    struct
+    {
+        uint32_t fp_ampl3 : 16;         // Bit[15:0] First Path Amplitude point 3.
+        uint32_t cir_pwr  : 16;         // Bit[31:16] Channel Impulse Response Power.
+    };
+    uint32_t value;
+};
+
 // Register file: 0x12 – Rx Frame Quality information (in double buffer set)
+union dw1000_reg_rx_fqual
+{
+    struct
+    {
+        union dw1000_reg_rx_fqual_12_00 ofs_00;
+        union dw1000_reg_rx_fqual_12_04 ofs_04;
+    };
+    uint64_t value;
+};
 
 // Register file: 0x13 – Receiver Time Tracking Interval (in double buffer set)
 
 // Register file: 0x14 – Receiver Time Tracking Offset (in double buffer set)
 
 // Register file: 0x15 – Receive Message Time of Arrival (in double buffer set)
-union dw1000_reg_rx_time
+
+// REG:15:00 – RX_TIME – Receive Time Stamp (Octets 0 to 3, 32-bits)
+union dw1000_reg_rx_time_15_00
 {
     struct
     {
         uint32_t rx_stamp_l;            // The fully adjusted time of reception (low 32 bits of 40-bit value).
-        //
+    };
+    uint32_t value;
+};
+
+// REG:15:04 – RX_TIME – Receive Time Stamp (Octets 4 to 7, 32-bits)
+union dw1000_reg_rx_time_15_04
+{
+    struct
+    {
         uint32_t rx_stamp_h : 8;        // The fully adjusted time of reception (high 8 bits of 40-bit value).
         uint32_t fp_index   : 16;       // First path index.
         uint32_t fp_ampl1_l : 8;        // First Path Amplitude point 1 (low 8 bits of 16-bit value).
-        //
+    };
+    uint32_t value;
+};
+
+// REG:15:08 – RX_TIME – Receive Time Stamp (Octets 8 to 11, 32-bits)
+union dw1000_reg_rx_time_15_08
+{
+    struct
+    {
         uint32_t fp_ampl1_h : 8;        // First Path Amplitude point 1 (high 8 bits of 16-bit value).
         uint32_t rx_rawst_l : 24;       // The Raw Timestamp for the frame (low 24 bits of 40-bit value).
-        //
+    };
+    uint32_t value;
+};
+
+// REG:15:0C – RX_TIME – Receive Time Stamp (Octets 12 to 13, 16-bits)
+union dw1000_reg_rx_time_15_0c
+{
+    struct
+    {
         uint16_t rx_rawst_h;            // The Raw Timestamp for the frame (high 16 bits of 40-bit value).
+    };
+    uint16_t value;
+};
+
+union dw1000_reg_rx_time
+{
+    struct
+    {
+        union dw1000_reg_rx_time_15_00 ofs_00;
+        union dw1000_reg_rx_time_15_04 ofs_04;
+        union dw1000_reg_rx_time_15_08 ofs_08;
+        union dw1000_reg_rx_time_15_0c ofs_0c;
     };
     uint8_t value[14];
 };
@@ -466,7 +592,7 @@ union dw1000_reg_tx_antd
 {
     struct
     {
-        uint16_t tx_antdl;              // 16-bit Delay from Transmit to Antenna
+        uint16_t tx_antdl;              // 16-bit Delay from Transmit to Antenna.
     };
     uint16_t value;
 };
@@ -484,6 +610,22 @@ union dw1000_reg_tx_antd
 // Register file: 0x1E – Transmit Power Control
 
 // Register file: 0x1F – Channel Control
+union dw1000_reg_chan_ctrl
+{
+    struct
+    {
+        uint32_t tx_chan  : 4;          // Bit[3:0] Transmit channel.
+        uint32_t rx_chan  : 4;          // Bit[7:4] Receive channel.
+        uint32_t rsvd     : 9;          // Bit[16:8] Reserved.
+        uint32_t dwsfd    : 1;          // Bit[17] Decawave proprietary SFD sequence.
+        uint32_t rxprf    : 2;          // Bit[19:18] PRF used in the receiver.
+        uint32_t tnssfd   : 1;          // Bit[20] User specified (non-standard) SFD in the transmitter.
+        uint32_t rnssfd   : 1;          // Bit[21] User specified (non-standard) SFD in the receiver.
+        uint32_t tx_pcode : 5;          // Bit[26:22] Preamble code used in the transmitter.
+        uint32_t rx_pcode : 5;          // Bit[31:27] Preamble code used in the receiver.
+    };
+    uint32_t value;
+};
 
 // Register file: 0x20 – Reserved
 
@@ -515,18 +657,6 @@ union dw1000_sub_reg_drx_tune2
         uint32_t drx_tun2;              // Digital Tuning Register 2. RW
     };
     uint32_t value;
-};
-
-enum drx_tune2_value
-{
-    PAC_8_PRF_16MHZ  = 0x311A002D,
-    PAC_8_PRF_64MHZ  = 0x313B006B,
-    PAC_16_PRF_16MHZ = 0x331A0052,
-    PAC_16_PRF_64MHZ = 0x333B00BE,
-    PAC_32_PRF_16MHZ = 0x351A009A,
-    PAC_32_PRF_64MHZ = 0x353B015E,
-    PAC_64_PRF_16MHZ = 0x371A011D,
-    PAC_64_PRF_64MHZ = 0x373B0296,
 };
 
 // Sub-Register 0x27:0C – DRX_RES2
