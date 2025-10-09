@@ -104,17 +104,14 @@ uint8_t m_rx_buf[4096];
 
 int dw1000_non_indexed_read(uint8_t reg_file_id, void *buf, size_t len)
 {
-    int ret = 0;
     int header_size = sizeof(union dw1000_tran_header1);
     int num_bytes = len + header_size;
-    if ((buf == NULL) || (reg_file_id > 0x3F) || (len < 2) || (num_bytes > BUF_SIZE)) {
-        ret = -1;
+    if ((buf == NULL) || (reg_file_id > 0x3F) || (len < 2) || (num_bytes > BUF_SIZE))
         goto err;
-    }
 
     union dw1000_tran_header1 header = {
         .rid = reg_file_id,
-        .si  = 0,
+        // .si  = 0,
         .op  = dw1000_SPI_READ,
     };
 
@@ -125,31 +122,29 @@ int dw1000_non_indexed_read(uint8_t reg_file_id, void *buf, size_t len)
     cs_select(SPI0_CSN);
     int num_written = spi_write_read_blocking(SPI_BUS, m_tx_buf, m_rx_buf, num_bytes);
     if (num_written != num_bytes) {
-        ret = -1;
+        cs_deselect(SPI0_CSN);
         printf("num_written (%d) != num_bytes (%d)\n", num_written, num_bytes);
+        goto err;
     }
     cs_deselect(SPI0_CSN);
     memcpy(buf, m_rx_buf + header_size, len);
 
+    return 0;
 err:
-    if (ret < 0)
-        printf("%s failed\n", __FUNCTION__);
-    return ret;
+    printf("%s failed\n", __FUNCTION__);
+    return -1;
 }
 
 int dw1000_non_indexed_write(uint8_t reg_file_id, void *buf, size_t len)
 {
-    int ret = 0;
     int header_size = sizeof(union dw1000_tran_header1);
     int num_bytes = len + header_size;
-    if ((buf == NULL) || (reg_file_id > 0x3F) || (len < 2) || (num_bytes > BUF_SIZE)) {
-        ret = -1;
+    if ((buf == NULL) || (reg_file_id > 0x3F) || (len < 2) || (num_bytes > BUF_SIZE))
         goto err;
-    }
 
     union dw1000_tran_header1 header = {
         .rid = reg_file_id,
-        .si  = 0,
+        // .si  = 0,
         .op  = dw1000_SPI_WRITE,
     };
 
@@ -160,33 +155,31 @@ int dw1000_non_indexed_write(uint8_t reg_file_id, void *buf, size_t len)
     cs_select(SPI0_CSN);
     int num_written = spi_write_blocking(SPI_BUS, m_tx_buf, num_bytes);
     if (num_written != num_bytes) {
-        ret = -1;
+        cs_deselect(SPI0_CSN);
         printf("num_written (%d) != num_bytes (%d)\n", num_written, num_bytes);
+        goto err;
     }
     cs_deselect(SPI0_CSN);
 
+    return 0;
 err:
-    if (ret < 0)
-        printf("%s failed\n", __FUNCTION__);
-    return ret;
+    printf("%s failed\n", __FUNCTION__);
+    return -1;
 }
 
 int dw1000_short_indexed_read(uint8_t reg_file_id, uint8_t sub_addr, void *buf, size_t len)
 {
-    int ret = 0;
     int header_size = sizeof(union dw1000_tran_header2);
     int num_bytes = len + header_size;
-    if ((buf == NULL) || (reg_file_id > 0x3F) || (sub_addr > 0x7F) || (len < 2) || (num_bytes > BUF_SIZE)) {
-        ret = -1;
+    if ((buf == NULL) || (reg_file_id > 0x3F) || (sub_addr > 0x7F) || (len < 2) || (num_bytes > BUF_SIZE))
         goto err;
-    }
 
     union dw1000_tran_header2 header = {
         .rid      = reg_file_id,
         .si       = 1,
         .op       = dw1000_SPI_READ,
         .sub_addr = sub_addr,
-        .ext      = 0,
+        // .ext      = 0,
     };
 
     memset(m_rx_buf, 0, num_bytes);
@@ -197,34 +190,32 @@ int dw1000_short_indexed_read(uint8_t reg_file_id, uint8_t sub_addr, void *buf, 
     cs_select(SPI0_CSN);
     int num_written = spi_write_read_blocking(SPI_BUS, m_tx_buf, m_rx_buf, num_bytes);
     if (num_written != num_bytes) {
-        ret = -1;
+        cs_deselect(SPI0_CSN);
         printf("num_written (%d) != num_bytes (%d)\n", num_written, num_bytes);
+        goto err;
     }
     cs_deselect(SPI0_CSN);
     memcpy(buf, m_rx_buf + header_size, len);
 
+    return 0;
 err:
-    if (ret < 0)
-        printf("%s failed\n", __FUNCTION__);
-    return ret;
+    printf("%s failed\n", __FUNCTION__);
+    return -1;
 }
 
 int dw1000_short_indexed_write(uint8_t reg_file_id, uint8_t sub_addr, void *buf, size_t len)
 {
-    int ret = 0;
     int header_size = sizeof(union dw1000_tran_header2);
     int num_bytes = len + header_size;
-    if ((buf == NULL) || (reg_file_id > 0x3F) || (sub_addr > 0x7F) || (len < 2) || (num_bytes > BUF_SIZE)) {
-        ret = -1;
+    if ((buf == NULL) || (reg_file_id > 0x3F) || (sub_addr > 0x7F) || (len < 2) || (num_bytes > BUF_SIZE))
         goto err;
-    }
 
     union dw1000_tran_header2 header = {
         .rid      = reg_file_id,
         .si       = 1,
         .op       = dw1000_SPI_WRITE,
         .sub_addr = sub_addr,
-        .ext      = 0,
+        // .ext      = 0,
     };
 
     memset(m_tx_buf, 0, num_bytes);
@@ -234,20 +225,20 @@ int dw1000_short_indexed_write(uint8_t reg_file_id, uint8_t sub_addr, void *buf,
     cs_select(SPI0_CSN);
     int num_written = spi_write_blocking(SPI_BUS, m_tx_buf, num_bytes);
     if (num_written != num_bytes) {
-        ret = -1;
+        cs_deselect(SPI0_CSN);
         printf("num_written (%d) != num_bytes (%d)\n", num_written, num_bytes);
+        goto err;
     }
     cs_deselect(SPI0_CSN);
 
+    return 0;
 err:
-    if (ret < 0)
-        printf("%s failed\n", __FUNCTION__);
-    return ret;
+    printf("%s failed\n", __FUNCTION__);
+    return -1;
 }
 
 int dw1000_long_indexed_read(uint8_t reg_file_id, uint16_t sub_addr, void *buf, size_t len)
 {
-    int ret = 0;
     int header_size = sizeof(union dw1000_tran_header3);
     int num_bytes = len + header_size;
     if ((buf == NULL) || (reg_file_id > 0x3F) || (sub_addr > 0x7FFF) || (len < 2) || (num_bytes > BUF_SIZE))
@@ -271,27 +262,25 @@ int dw1000_long_indexed_read(uint8_t reg_file_id, uint16_t sub_addr, void *buf, 
     cs_select(SPI0_CSN);
     int num_written = spi_write_read_blocking(SPI_BUS, m_tx_buf, m_rx_buf, num_bytes);
     if (num_written != num_bytes) {
-        ret = -1;
+        cs_deselect(SPI0_CSN);
         printf("num_written (%d) != num_bytes (%d)\n", num_written, num_bytes);
+        goto err;
     }
     cs_deselect(SPI0_CSN);
     memcpy(buf, m_rx_buf + header_size, len);
 
+    return 0;
 err:
-    if (ret < 0)
-        printf("%s failed\n", __FUNCTION__);
-    return ret;
+    printf("%s failed\n", __FUNCTION__);
+    return -1;
 }
 
 int dw1000_long_indexed_write(uint8_t reg_file_id, uint16_t sub_addr, void *buf, size_t len)
 {
-    int ret = 0;
     int header_size = sizeof(union dw1000_tran_header3);
     int num_bytes = len + header_size;
-    if ((buf == NULL) || (reg_file_id > 0x3F) || (sub_addr > 0x7FFF) || (len < 2) || (num_bytes > BUF_SIZE)) {
-        ret = -1;
+    if ((buf == NULL) || (reg_file_id > 0x3F) || (sub_addr > 0x7FFF) || (len < 2) || (num_bytes > BUF_SIZE))
         goto err;
-    }
 
     union dw1000_tran_header3 header = {
         .rid        = reg_file_id,
@@ -310,15 +299,16 @@ int dw1000_long_indexed_write(uint8_t reg_file_id, uint16_t sub_addr, void *buf,
     cs_select(SPI0_CSN);
     int num_written = spi_write_blocking(SPI_BUS, m_tx_buf, num_bytes);
     if (num_written != num_bytes) {
-        ret = -1;
+        cs_deselect(SPI0_CSN);
         printf("num_written (%d) != num_bytes (%d)\n", num_written, num_bytes);
+        goto err;
     }
     cs_deselect(SPI0_CSN);
 
+    return 0;
 err:
-    if (ret < 0)
-        printf("%s failed\n", __FUNCTION__);
-    return ret;
+    printf("%s failed\n", __FUNCTION__);
+    return -1;
 }
 
 int driver_dw1000_spi_init(struct spi_cfg *cfg)
@@ -371,7 +361,58 @@ struct dw1000_rx_para
     uint64_t rxdlye;                    // Delayed Receive Time (Unit: 15.65 picoseconds)
 };
 
-int dw1000_set_rx_para(struct dw1000_rx_para *cfg)
+int dw1000_init()
+{
+    union dw1000_reg_sys_cfg sys_cfg = {
+        // Disable Double-Buffered
+        // .dis_drxb = 1,
+        // .rxautr   = 0,
+        // Enable Double-Buffered
+        .dis_drxb = 0,
+        .rxautr   = 1,
+    };
+    if (dw1000_non_indexed_write(DW1000_SYS_CFG, &sys_cfg, sizeof(sys_cfg)))
+        goto err;
+
+    return 0;
+err:
+    printf("%s failed\n", __FUNCTION__);
+    return -1;
+}
+
+/**
+ * @brief Get Host Side Receive Buffer Pointer
+ */
+int dw1000_get_rx_buf_ptr()
+{
+    union dw1000_reg_sys_status sys_sts = {0};
+    if (dw1000_non_indexed_read(DW1000_SYS_STATUS, &sys_sts, sizeof(sys_sts)))
+        goto err;
+
+    return (sys_sts.ofs_00.icrbp << 1) | sys_sts.ofs_00.hsrbp;
+err:
+    printf("%s failed\n", __FUNCTION__);
+    return -1;
+}
+
+/**
+ * @brief Toggle Host Side Receive Buffer Pointer
+ */
+int dw1000_set_rx_buf_ptr()
+{
+    union dw1000_reg_sys_ctrl sys_ctrl = {
+        sys_ctrl.hrbpt = 1
+    };
+    if (dw1000_non_indexed_write(DW1000_SYS_CTRL, &sys_ctrl, sizeof(sys_ctrl)))
+        goto err;
+
+    return 0;
+err:
+    printf("%s failed\n", __FUNCTION__);
+    return -1;
+}
+
+int dw1000_set_rx_parameters(struct dw1000_rx_para *cfg)
 {
     if (cfg->rxdlye) {
         union dw1000_reg_dx_time dx_time = {
@@ -394,9 +435,7 @@ int dw1000_set_rx_para(struct dw1000_rx_para *cfg)
     if (dw1000_short_indexed_write(DW1000_DRX_CONF, DW1000_DRX_PRETOC, &drx_pretoc, sizeof(drx_pretoc)))
         goto err;
 
-    union dw1000_reg_sys_ctrl sys_ctrl = {
-        .value = 0,
-    };
+    union dw1000_reg_sys_ctrl sys_ctrl = {0};
     // sys_ctrl.sfcst = 0;
     // sys_ctrl.txstrt = 1;
     // if (cfg->txdlys)
@@ -407,6 +446,7 @@ int dw1000_set_rx_para(struct dw1000_rx_para *cfg)
     // sys_ctrl.cansfcs = 0;
     // sys_ctrl.txoff = 0;
     // sys_ctrl.wait4resp = 1;
+    // sys_ctrl.hrbpt = 1;
     if (dw1000_non_indexed_write(DW1000_SYS_CTRL, &sys_ctrl, sizeof(sys_ctrl)))
         goto err;
 
