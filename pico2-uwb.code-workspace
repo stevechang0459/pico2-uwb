@@ -47,7 +47,9 @@
 			"span": "c",
 			"stdlib.h": "c",
 			"binary_info.h": "c",
-			"spi.h": "c"
+			"spi.h": "c",
+			"gpio.h": "c",
+			"io_bank0.h": "c"
 		}
 	}
 }

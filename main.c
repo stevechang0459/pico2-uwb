@@ -10,6 +10,7 @@
 #include "spi.h"
 #include "led.h"
 #include "dw1000.h"
+#include "gpio.h"
 
 int main() {
     stdio_init_all();
@@ -34,7 +35,9 @@ int main() {
 
     #if (CONFIG_SPI_MASTER_MODE)
     // spi_master_test();
-    dw1000_spi_master_test();
+    static struct dw1000_context dw1000_ctx = {0};
+    dw1000_ctx_init(&dw1000_ctx);
+    dw1000_spi_master_test(&dw1000_ctx);
     #endif
     #if (CONFIG_SPI_SLAVE_MODE)
     spi_slave_test();

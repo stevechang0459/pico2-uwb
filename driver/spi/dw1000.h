@@ -4,6 +4,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "gpio.h"
+#include "spi.h"
+
 /**
  * The chipping rate given by the IEEE 802.15.4-2011 standard [1] is 499.2 MHz.
  * DW1000 system clocks are referenced to this frequency.
@@ -87,7 +90,7 @@ enum dw1000_reg_file_id
     DW1000_REG_FILE_ID_MAX = 0x40
 };
 
-enum dw1000_dig_diag_sub_reg_ofs
+enum dw1000_sub_reg_ofs_dig_diag
 {
     DW1000_EVC_CTRL = 0x00,
     DW1000_EVC_PHE  = 0x04,
@@ -106,7 +109,17 @@ enum dw1000_dig_diag_sub_reg_ofs
     DW1000_EVC_TMC  = 0x24,
 };
 
-enum dw1000_drx_conf_sub_reg_ofs
+enum dw1000_sub_reg_ofs_aon
+{
+    DW1000_AON_WCFG = 0x00,
+    DW1000_AON_CTRL = 0x02,
+    DW1000_AON_RDAT = 0x03,
+    DW1000_AON_ADDR = 0x04,
+    DW1000_AON_CFG0 = 0x06,
+    DW1000_AON_CFG1 = 0x0a,
+};
+
+enum dw1000_sub_reg_ofs_drx_conf
 {
     DW1000_DRX_TUNE0b   = 0x02,
     DW1000_DRX_TUNE1a   = 0x04,
@@ -190,6 +203,43 @@ enum drx_tune2_value
     DW1000_PAC_64_PRF_16MHZ = 0x371A011D,
     DW1000_PAC_64_PRF_64MHZ = 0x373B0296,
 };
+
+#define DW1000_SYS_MASK_IRQS            (1 << 0)
+#define DW1000_SYS_MASK_CPLOCK          (1 << 1)
+#define DW1000_SYS_MASK_ESYNCR          (1 << 2)
+#define DW1000_SYS_MASK_AAT             (1 << 3)
+#define DW1000_SYS_MASK_TXFRB           (1 << 4)
+#define DW1000_SYS_MASK_TXPRS           (1 << 5)
+#define DW1000_SYS_MASK_TXPHS           (1 << 6)
+#define DW1000_SYS_MASK_TXFRS           (1 << 7)
+#define DW1000_SYS_MASK_RXPRD           (1 << 8)
+#define DW1000_SYS_MASK_RXSFDD          (1 << 9)
+#define DW1000_SYS_MASK_LDEDONE         (1 << 10)
+#define DW1000_SYS_MASK_RXPHD           (1 << 11)
+#define DW1000_SYS_MASK_RXPHE           (1 << 12)
+#define DW1000_SYS_MASK_RXDFR           (1 << 13)
+#define DW1000_SYS_MASK_RXFCG           (1 << 14)
+#define DW1000_SYS_MASK_RXFCE           (1 << 15)
+#define DW1000_SYS_MASK_RXRFSL          (1 << 16)
+#define DW1000_SYS_MASK_RXRFTO          (1 << 17)
+#define DW1000_SYS_MASK_LDEERR          (1 << 18)
+#define DW1000_SYS_MASK_RSVD            (1 << 19)
+#define DW1000_SYS_MASK_RXOVRR          (1 << 20)
+#define DW1000_SYS_MASK_RXPTO           (1 << 21)
+#define DW1000_SYS_MASK_GPIOIRQ         (1 << 22)
+#define DW1000_SYS_MASK_SLP2INIT        (1 << 23)
+#define DW1000_SYS_MASK_RFPLL_LL        (1 << 24)
+#define DW1000_SYS_MASK_CLKPLL_LL       (1 << 25)
+#define DW1000_SYS_MASK_RXSFDTO         (1 << 26)
+#define DW1000_SYS_MASK_HPDWARN         (1 << 27)
+#define DW1000_SYS_MASK_TXBERR          (1 << 28)
+#define DW1000_SYS_MASK_AFFREJ          (1 << 29)
+#define DW1000_SYS_MASK_HSRBP           (1 << 30)
+#define DW1000_SYS_MASK_ICRBP           (1 << 31)
+
+#define DW1000_SYS_MASK_RXRSCS          (1 << 0)
+#define DW1000_SYS_MASK_RXPREJ          (1 << 1)
+#define DW1000_SYS_MASK_TXPUTE          (1 << 2)
 
 #pragma push
 #pragma pack(1)
@@ -361,46 +411,89 @@ union dw1000_reg_sys_ctrl
     uint32_t value;
 };
 
+// Register file: 0x0E – System Event Mask Register
+union dw1000_reg_sys_mask
+{
+    struct
+    {
+        uint32_t rsvd1     : 1;         // Bit[0] Reserved.
+        uint32_t mcplock   : 1;         // Bit[1] Mask clock PLL lock event.
+        uint32_t mesyncr   : 1;         // Bit[2] Mask external sync clock reset event.
+        uint32_t maat      : 1;         // Bit[3] Mask automatic acknowledge trigger event.
+        uint32_t mtxfrb    : 1;         // Bit[4] Mask transmit frame begins event.
+        uint32_t mtxprs    : 1;         // Bit[5] Mask transmit preamble sent event.
+        uint32_t mtxphs    : 1;         // Bit[6] Mask transmit PHY Header Sent event.
+        uint32_t mtxfrs    : 1;         // Bit[7] Mask transmit frame sent event.
+        //
+        uint32_t mrxprd    : 1;         // Bit[8] Mask receiver preamble detected event.
+        uint32_t mrxsfdd   : 1;         // Bit[9] Mask receiver SFD detected event.
+        uint32_t mldedone  : 1;         // Bit[10] Mask LDE processing done event.
+        uint32_t mrxphd    : 1;         // Bit[11] Mask receiver PHY header detect event.
+        uint32_t mrxphe    : 1;         // Bit[12] Mask receiver PHY header error event.
+        uint32_t mrxdfr    : 1;         // Bit[13] Mask receiver data frame ready event.
+        uint32_t mrxfcg    : 1;         // Bit[14] Mask receiver FCS good event.
+        uint32_t mrxfce    : 1;         // Bit[15] Mask receiver FCS error event.
+        //
+        uint32_t mrxrfsl   : 1;         // Bit[16] Mask receiver Reed Solomon Frame Sync Loss event.
+        uint32_t mrxrfto   : 1;         // Bit[17] Mask Receive Frame Wait Timeout event.
+        uint32_t mldeerr   : 1;         // Bit[18] Mask leading edge detection processing error event.
+        uint32_t rsvd2     : 1;         // Bit[19] Reserved.
+        uint32_t mrxovrr   : 1;         // Bit[20] Mask Receiver Overrun event.
+        uint32_t mrxpto    : 1;         // Bit[21] Mask Preamble detection timeout event.
+        uint32_t mgpioirq  : 1;         // Bit[22] Mask GPIO interrupt event.
+        uint32_t mslp2init : 1;         // Bit[23] Mask SLEEP to INIT event.
+        //
+        uint32_t mrfpllll  : 1;         // Bit[24] Mask RF PLL Losing Lock warning event.
+        uint32_t mcpllll   : 1;         // Bit[25] Mask Clock PLL Losing Lock warning event.
+        uint32_t mrxsfdto  : 1;         // Bit[26] Mask Receive SFD timeout event.
+        uint32_t mhpdwarn  : 1;         // Bit[27] Mask Half Period Delay Warning event.
+        uint32_t mtxberr   : 1;         // Bit[28] Mask Transmit Buffer Error event.
+        uint32_t maffrej   : 1;         // Bit[29] Mask Automatic Frame Filtering rejection event.
+        uint32_t rsvd3     : 2;         // Bit[31:30] Reserved.
+    };
+    uint32_t value;
+};
+
 // REG:0F:00 – SYS_STATUS – System Status Register (octets 0 to 3)
 union dw1000_reg_sys_status_0f_00
 {
     struct
     {
-        uint32_t irqs      : 1;         // Interrupt Request Status..
-        uint32_t cplock    : 1;         // Clock PLL Lock.
-        uint32_t esyncr    : 1;         // External Sync Clock Reset.
-        uint32_t aat       : 1;         // Automatic Acknowledge Trigger.
-        uint32_t txfrb     : 1;         // Transmit Frame Begins.
-        uint32_t txprs     : 1;         // Transmit Preamble Sent.
+        uint32_t irqs      : 1;         // Bit[0] Interrupt Request Status.
+        uint32_t cplock    : 1;         // Bit[1] Clock PLL Lock.
+        uint32_t esyncr    : 1;         // Bit[2] External Sync Clock Reset.
+        uint32_t aat       : 1;         // Bit[3] Automatic Acknowledge Trigger.
+        uint32_t txfrb     : 1;         // Bit[4] Transmit Frame Begins.
+        uint32_t txprs     : 1;         // Bit[5] Transmit Preamble Sent.
         uint32_t txphs     : 1;         // Bit[6] Transmit PHY Header Sent.
-        uint32_t txfrs     : 1;         // Transmit Frame Sent.
+        uint32_t txfrs     : 1;         // Bit[7] Transmit Frame Sent.
         //
-        uint32_t rxprd     : 1;         // Receiver Preamble Detected status.
-        uint32_t rxsfdd    : 1;         // Receiver SFD Detected.
-        uint32_t ldedone   : 1;         // LDE processing done.
-        uint32_t rxphd     : 1;         // Receiver PHY Header Detect.
-        uint32_t rxphe     : 1;         // Receiver PHY Header Error.
+        uint32_t rxprd     : 1;         // Bit[8] Receiver Preamble Detected status.
+        uint32_t rxsfdd    : 1;         // Bit[9] Receiver SFD Detected.
+        uint32_t ldedone   : 1;         // Bit[10] LDE processing done.
+        uint32_t rxphd     : 1;         // Bit[11] Receiver PHY Header Detect.
+        uint32_t rxphe     : 1;         // Bit[12] Receiver PHY Header Error.
         uint32_t rxdfr     : 1;         // Bit[13] Receiver Data Frame Ready.
-        uint32_t rxfcg     : 1;         // Receiver FCS Good.
-        uint32_t rxfce     : 1;         // Receiver FCS Error.
+        uint32_t rxfcg     : 1;         // Bit[14] Receiver FCS Good.
+        uint32_t rxfce     : 1;         // Bit[15] Receiver FCS Error.
         //
-        uint32_t rxrfsl    : 1;         // Receiver Reed Solomon Frame Sync Loss.
-        uint32_t rxrfto    : 1;         // Receive Frame Wait Timeout.
-        uint32_t ldeerr    : 1;         // Leading edge detection processing error.
-        uint32_t rsvd      : 1;         // Reserved.
-        uint32_t rxovrr    : 1;         // Receiver Overrun.
-        uint32_t rxpto     : 1;         // Preamble detection timeout.
-        uint32_t gpioirq   : 1;         // GPIO interrupt.
-        uint32_t slp2init  : 1;         // SLEEP to INIT.
+        uint32_t rxrfsl    : 1;         // Bit[16] Receiver Reed Solomon Frame Sync Loss.
+        uint32_t rxrfto    : 1;         // Bit[17] Receive Frame Wait Timeout.
+        uint32_t ldeerr    : 1;         // Bit[18] Leading edge detection processing error.
+        uint32_t rsvd      : 1;         // Bit[19] Reserved.
+        uint32_t rxovrr    : 1;         // Bit[20] Receiver Overrun.
+        uint32_t rxpto     : 1;         // Bit[21] Preamble detection timeout.
+        uint32_t gpioirq   : 1;         // Bit[22] GPIO interrupt.
+        uint32_t slp2init  : 1;         // Bit[23] SLEEP to INIT.
         //
-        uint32_t rfpll_ll  : 1;         // RF PLL Losing Lock.
-        uint32_t clkpll_ll : 1;         // Clock PLL Losing Lock.
-        uint32_t rxsfdto   : 1;         // Receive SFD timeout.
-        uint32_t hpdwarn   : 1;         // Half Period Delay Warning.
-        uint32_t txberr    : 1;         // Transmit Buffer Error.
-        uint32_t affrej    : 1;         // Automatic Frame Filtering rejection.
-        uint32_t hsrbp     : 1;         // Host Side Receive Buffer Pointer.
-        uint32_t icrbp     : 1;         // IC side Receive Buffer Pointer.
+        uint32_t rfpll_ll  : 1;         // Bit[24] RF PLL Losing Lock.
+        uint32_t clkpll_ll : 1;         // Bit[25] Clock PLL Losing Lock.
+        uint32_t rxsfdto   : 1;         // Bit[26] Receive SFD timeout.
+        uint32_t hpdwarn   : 1;         // Bit[27] Half Period Delay Warning.
+        uint32_t txberr    : 1;         // Bit[28] Transmit Buffer Error.
+        uint32_t affrej    : 1;         // Bit[29] Automatic Frame Filtering rejection.
+        uint32_t hsrbp     : 1;         // Bit[30] Host Side Receive Buffer Pointer.
+        uint32_t icrbp     : 1;         // Bit[31] IC side Receive Buffer Pointer.
     };
     uint32_t value;
 };
@@ -410,10 +503,10 @@ union dw1000_reg_sys_status_0f_04
 {
     struct
     {
-        uint8_t rxrscs : 1;             // Receiver Reed-Solomon Correction Status.
-        uint8_t rxprej : 1;             // Receiver Preamble Rejection.
-        uint8_t txpute : 1;             // Transmit power up time error.
-        uint8_t rsvd   : 5;             // Reserved.
+        uint8_t rxrscs : 1;             // Bit[0] Receiver Reed-Solomon Correction Status.
+        uint8_t rxprej : 1;             // Bit[1] Receiver Preamble Rejection.
+        uint8_t txpute : 1;             // Bit[2] Transmit power up time error.
+        uint8_t rsvd   : 5;             // Bit[7:3] Reserved.
     };
     uint8_t value;
 };
@@ -742,6 +835,20 @@ union dw1000_sub_reg_drx_pretoc
 // Sub-Register 0x2C:05 – AON_RES1
 
 // Sub-Register 0x2C:06 – AON_CFG0
+union dw1000_sub_reg_aon_cfg0
+{
+    struct
+    {
+        uint32_t sleep_en : 1;          // Bit[0] Sleep Enable.
+        uint32_t wake_pin : 1;          // Bit[1] Wake using WAKEUP pin.
+        uint32_t wake_spi : 1;          // Bit[2] Wake using SPI access.
+        uint32_t wake_cnt : 1;          // Bit[3] Wake when sleep counter elapses.
+        uint32_t lpdiv_en : 1;          // Bit[4] Low power divider enable configuration.
+        uint32_t lpclkdiva : 11;        // Bit[15:5] divider count for dividing the raw DW1000 XTAL oscillator frequency.
+        uint32_t sleep_tim : 16;        // Bit[31:16] Sleep time.
+    };
+    uint32_t value;
+};
 
 // Sub-Register 0x2C:0A – AON_CFG1
 
@@ -1031,7 +1138,7 @@ union dw1000_tran_header3
         uint8_t op          : 1;        // Operation: 0 = Read, 1 = Write
         uint16_t sub_addr_l : 7;        // Low order 7 bits of 15-bit Register file sub-address, range 0x0000 to 0x7FFF (32768 byte locations)
         uint16_t ext        : 1;        // Extended Address: 1 = yes
-        uint16_t sub_addr_h : 16;       // High order 8 bits of 15-bit Register file sub-address, range 0x0000 to 0x7FFF (32768 byte locations)
+        uint16_t sub_addr_h : 8;        // High order 8 bits of 15-bit Register file sub-address, range 0x0000 to 0x7FFF (32768 byte locations)
     };
     uint8_t value[3];
 };
@@ -1045,6 +1152,37 @@ struct dw1000_reg
     uint8_t reg_file_type;
 };
 
-void dw1000_spi_master_test();
+struct dw1000_trx_para
+{
+    uint8_t tx_chan;                    // Transmit channel
+    uint8_t rx_chan;                    // Receive channel
+    uint8_t tx_pcode;                   // Preamble code used in the transmitter
+    uint8_t rx_pcode;                   // Preamble code used in the receiver
+    uint16_t tflen;                     // Transmit Frame Length (Data Length)
+    enum dw1000_br_sel txbr_sel;        // Data Rate
+    enum dw1000_prf_sel txprf_sel;      // PRF
+    enum dw1000_psr_sel txpsr_sel;      // Preamble Length
+    enum dw1000_br_sel rxbr_sel;        // Data Rate
+    enum dw1000_prf_sel rxprf_sel;      // PRF
+    enum dw1000_psr_sel rxpsr_sel;      // Preamble Length
+    uint16_t buf_ofs;                   // Transmit buffer index offset
+    uint8_t ifs_delay;                  // Inter-Frame Spacing (Delay)
+    uint64_t txdlys;                    // Delayed Send Time (Unit: 15.65 picoseconds)
+    //
+    uint32_t drx_tune2;                 // Digital Tuning Register 2 (for PAC size and RXPRF)
+    uint32_t drx_pretoc;                // Preamble detection timeout count (in units of PAC size symbols)
+    uint32_t drx_sfdtoc;                // SFD detection timeout count (Default: 4096 + 64 + 1 symbols)
+    uint64_t rxdlye;                    // Delayed Receive Time (Unit: 15.65 picoseconds)
+};
+
+struct dw1000_context
+{
+    struct spi_config spi_cfg;
+    struct gpio_irq_config irq_cfg;
+    struct dw1000_trx_para trx_cfg;
+};
+
+void dw1000_ctx_init(struct dw1000_context *dw1000_ctx);
+void dw1000_spi_master_test(const struct dw1000_context *dw1000_ctx);
 
 #endif  // ~ DW1000_H

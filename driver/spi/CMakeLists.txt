@@ -1,3 +1,4 @@
+# pico-2-uwb/driver/spi/CMakeLists.txt
 add_library(driver_spi STATIC
   spi.c
   dw1000.c
@@ -20,3 +21,5 @@ if (ENABLE_DRIVER_LED)
   target_link_libraries(driver_spi PUBLIC driver_led)
   target_compile_definitions(driver_spi PUBLIC DRIVER_SPI_WITH_LED=1)
 endif()
+
+target_link_libraries(driver_spi PUBLIC driver_gpio)

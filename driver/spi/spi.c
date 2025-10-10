@@ -4,12 +4,12 @@
 #include "pico/binary_info.h"
 #include "led.h"
 #include "print.h"
+#include "gpio.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#if (CONFIG_SPI_MASTER_MODE)
 void cs_select(uint cs_pin)
 {
     asm volatile("nop \n nop \n nop"); // FIXME
@@ -24,34 +24,40 @@ void cs_deselect(uint cs_pin)
     asm volatile("nop \n nop \n nop"); // FIXME
 }
 
-int driver_spi_init(struct spi_cfg *cfg)
+int driver_spi_init(const struct spi_config *spi_cfg)
 {
-    if (cfg->spi == NULL || (cfg->spi != spi0 && cfg->spi != spi1))
+    if (spi_cfg->spi == NULL || (spi_cfg->spi != spi0 && spi_cfg->spi != spi1))
         goto err;
 
-    spi_init(cfg->spi, cfg->spi_speed);
-    spi_set_slave(cfg->spi, !!cfg->slave_mode);
-    gpio_set_function(SPI0_SCK, GPIO_FUNC_SPI);
-    gpio_set_function(SPI0_TX,  GPIO_FUNC_SPI);
-    gpio_set_function(SPI0_RX,  GPIO_FUNC_SPI);
-    gpio_set_function(SPI0_CSN, GPIO_FUNC_SPI);
+    spi_init(spi_cfg->spi, spi_cfg->spi_speed);
+    spi_set_slave(spi_cfg->spi, !!spi_cfg->slave_mode);
+    gpio_set_function(spi_cfg->pin.sck, GPIO_FUNC_SPI);
+    gpio_set_function(spi_cfg->pin.tx,  GPIO_FUNC_SPI);
+    gpio_set_function(spi_cfg->pin.rx,  GPIO_FUNC_SPI);
+    gpio_set_function(spi_cfg->pin.csn, GPIO_FUNC_SPI);
+
     // Make the SPI pins available to picotool
-    bi_decl(bi_4pins_with_func(SPI0_RX, SPI0_TX, SPI0_SCK, SPI0_CSN, GPIO_FUNC_SPI));
+    // bi_decl(bi_4pins_with_func(SPI0_RX_PIN, SPI0_TX_PIN, SPI0_SCK_PIN, SPI0_CSN_PIN, GPIO_FUNC_SPI));
 
     return 0;
 err:
     return -1;
 }
 
+#if (CONFIG_SPI_MASTER_MODE)
 void spi_master_test()
 {
-    struct spi_cfg cfg = {
-        .spi = SPI_INST,
-        .spi_speed = SPI_SPEED,
+    struct spi_config spi_cfg = {
+        .spi        = SPI_INST,
+        .spi_speed  = SPI_SPEED,
+        .pin.sck    = SPI0_SCK_PIN,
+        .pin.tx     = SPI0_TX_PIN,
+        .pin.rx     = SPI0_RX_PIN,
+        .pin.csn    = SPI0_CSN_PIN,
         .slave_mode = false,
     };
 
-    driver_spi_init(&cfg);
+    driver_spi_init(&spi_cfg);
 
     uint8_t tx_buf[BUF_SIZE], rx_buf[BUF_SIZE];
 
@@ -65,7 +71,7 @@ void spi_master_test()
     bool led_out = 0;
     for (size_t i = 0; ; ++i) {
         // Write the output buffer to MOSI, and at the same time read from MISO.
-        spi_write_read_blocking(SPI_BUS, tx_buf, rx_buf, 5);
+        spi_write_read_blocking(spi_cfg.spi, tx_buf, rx_buf, 5);
 
         // Write to stdio whatever came in on the MISO line.
         printf("SPI master read[%d]:\n", i);
@@ -84,13 +90,13 @@ void spi_master_test()
 #if (CONFIG_SPI_SLAVE_MODE)
 void spi_slave_test()
 {
-    struct spi_cfg cfg = {
+    struct spi_config spi_cfg = {
         .spi = SPI_INST,
         .spi_speed = SPI_SPEED,
         .slave_mode = true,
     };
 
-    driver_spi_init(&cfg);
+    driver_spi_init(&spi_cfg);
 
     uint8_t tx_buf[BUF_SIZE], rx_buf[BUF_SIZE];
 
