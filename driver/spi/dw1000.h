@@ -132,6 +132,20 @@ enum dw1000_sub_reg_ofs_drx_conf
     DW1000_RXPACC_NOSAT = 0x2c,
 };
 
+enum dw1000_sub_reg_ofs_gpio_ctrl
+{
+    DW1000_GPIO_MODE  = 0x00,
+    DW1000_GPIO_DIR   = 0x08,
+    DW1000_GPIO_DOUT  = 0x0c,
+    DW1000_GPIO_IRQE  = 0x10,
+    DW1000_GPIO_ISEN  = 0x14,
+    DW1000_GPIO_IMODE = 0x18,
+    DW1000_GPIO_IBES  = 0x1c,
+    DW1000_GPIO_ICLR  = 0x20,
+    DW1000_GPIO_IDBE  = 0x24,
+    DW1000_GPIO_RAW   = 0x28,
+};
+
 enum dw1000_reg_file_type
 {
     DW1000_RO  = 0,
@@ -192,7 +206,7 @@ enum dw1000_psr_sel
     DW1000_PSR_4096 = 0x3,  // The standard preamble length for the 802.15.4 UWB PHY
 };
 
-enum drx_tune2_value
+enum dw1000_drx_tune2_val
 {
     DW1000_PAC_8_PRF_16MHZ  = 0x311A002D,
     DW1000_PAC_8_PRF_64MHZ  = 0x313B006B,
@@ -202,6 +216,53 @@ enum drx_tune2_value
     DW1000_PAC_32_PRF_64MHZ = 0x353B015E,
     DW1000_PAC_64_PRF_16MHZ = 0x371A011D,
     DW1000_PAC_64_PRF_64MHZ = 0x373B0296,
+};
+
+enum dw1000_chan_sel
+{
+    DW1000_CHAN_1 = 1,
+    DW1000_CHAN_2 = 2,
+    DW1000_CHAN_3 = 3,
+    DW1000_CHAN_4 = 4,
+    DW1000_CHAN_5 = 5,
+    DW1000_CHAN_7 = 7,
+};
+
+enum dw1000_pcode_sel
+{
+    // For 16 MHz PRF
+    DW1000_PCODE_1  = 1,
+    DW1000_PCODE_2  = 2,
+    DW1000_PCODE_3  = 3,
+    DW1000_PCODE_4  = 4,
+    DW1000_PCODE_5  = 5,
+    DW1000_PCODE_6  = 6,
+    DW1000_PCODE_7  = 7,
+    DW1000_PCODE_8  = 8,
+    // For 64 MHz PRF
+    DW1000_PCODE_9  = 9,
+    DW1000_PCODE_10 = 10,
+    DW1000_PCODE_11 = 11,
+    DW1000_PCODE_12 = 12,
+    DW1000_PCODE_17 = 17,
+    DW1000_PCODE_18 = 18,
+    DW1000_PCODE_19 = 19,
+    DW1000_PCODE_20 = 20,
+    // For 64 MHz PRF (DPS)
+    DW1000_PCODE_13 = 13,
+    DW1000_PCODE_14 = 14,
+    DW1000_PCODE_15 = 15,
+    DW1000_PCODE_16 = 16,
+    DW1000_PCODE_21 = 21,
+    DW1000_PCODE_22 = 22,
+    DW1000_PCODE_23 = 23,
+    DW1000_PCODE_24 = 24,
+};
+
+enum dw1000_hirq_pol_sel
+{
+    DW1000_HIRQ_POL_ACTIVE_LOW  = 0,
+    DW1000_HIRQ_POL_ACTIVE_HIGH = 1,
 };
 
 #define DW1000_SYS_MASK_IRQS            (1 << 0)
@@ -699,8 +760,84 @@ union dw1000_reg_tx_antd
 // Register file: 0x1C – Reserved
 
 // Register file: 0x1D – SNIFF Mode
+union dw1000_reg_sniff_mode
+{
+    struct
+    {
+        uint32_t sniff_ont  : 4;        // Bit[3:0] SNIFF Mode ON time. (in units of PAC)
+        uint32_t rsvd1      : 4;        // Bit[7:4] Reserved
+        uint32_t sniff_offt : 8;        // Bit[15:8] SNIFF Mode OFF time specified in μs.
+        uint32_t rsvd2      : 16;       // Bit[31:16] Reserved
+    };
+    uint32_t value;
+};
 
 // Register file: 0x1E – Transmit Power Control
+union dw1000_reg_tx_power
+{
+    // Smart Transmit Power Control (When DIS_STXP = 0)
+    struct
+    {
+        /**
+         * Bit[7:0] This is the normal power setting used for frames that do
+         * not fall within the data rate and frame length criteria required for
+         * a boost, i.e. the frame duration is more than 0.5 ms.
+         *
+         * It is also the power setting used for the PHR portion of the frame
+         * for all of the other three cases.
+         */
+        uint32_t boostnorm : 8;
+        /**
+         * Bit[15:8] This value sets the power applied to the preamble and data
+         * portions of the frame during transmission at the 6.8 Mbps data rate
+         * for frames that are less than 0.5 ms duration which is determined by
+         * the following criteria:
+         *
+         * -- Preamble Length of 64 symbols and Frame Length of <= 333 bytes.
+         * -- Preamble Length of 128 symbols and Frame Length of <= 281 bytes.
+         * -- Preamble Length of 256 symbols and Frame Length of <= 166 bytes.
+         */
+        uint32_t boostp500 : 8;
+        /**
+         * Bit[23:16] This value sets the power applied to the preamble and data
+         * portions of the frame during transmission at the 6.8 Mbps data rate
+         * for frames that are less than 0.25 ms duration which is determined by
+         * the following criteria:
+         *
+         * -- Preamble Length of 64 symbols and Frame Length of <= 123 bytes.
+         * -- Preamble Length of 128 symbols and Frame Length of <= 67 bytes.
+         */
+        uint32_t boostp250 : 8;
+        /**
+         * This value sets the power applied to the preamble and data portions
+         * of the frame during transmission at the 6.8 Mbps data rate for frames
+         * that are less than 0.125 ms duration which is determined by the
+         * following criteria:
+         *
+         * -- Preamble Length of 64 symbols, SFD Length <=16 symbols and Frame Length of <= 15 bytes.
+         * -- Preamble Length of 64 symbols, SFD Length <=12 symbols and Frame Length of <= 19 bytes.
+         * -- Preamble Length of 64 symbols, SFD Length of 8 symbols and Frame Length of <= 23 bytes.
+         */
+        uint32_t boostp125 : 8;
+    };
+    // Manual Transmit Power Control
+    struct
+    {
+        uint32_t na1      : 8;          // Bit[7:0] Not applicable = 0x22
+        /**
+         * Bit[15:8] This power setting is applied during the transmission of the PHY
+         * header (PHR) portion of the frame.
+         */
+        uint32_t txpowphr : 8;
+        /**
+         * Bit[23:16] This power setting is applied during the transmission of the
+         * synchronisation header (SHR) and data portions of the frame.
+         */
+        uint32_t txpowsd  : 8;
+        uint32_t na2      : 8;          // Bit[31:24] Not applicable = 0x0E
+    };
+    uint32_t value;
+};
 
 // Register file: 0x1F – Channel Control
 union dw1000_reg_chan_ctrl
@@ -732,7 +869,87 @@ union dw1000_reg_chan_ctrl
 
 // Register file: 0x25 – Accumulator CIR memory
 
+// Sub-Register 0x26:00 – GPIO_MODE
+union dw1000_sub_reg_gpio_mode
+{
+    uint32_t value;
+};
+
+// Sub-Register 0x26:04 – Reserved
+
+// Sub-Register 0x26:08 – GPIO_DIR
+union dw1000_sub_reg_gpio_dir
+{
+    uint32_t value;
+};
+
+// Sub-Register 0x26:0C – GPIO_DOUT
+union dw1000_sub_reg_gpio_dout
+{
+    uint32_t value;
+};
+
+// Sub-Register 0x26:10 – GPIO_IRQE
+union dw1000_sub_reg_gpio_irqe
+{
+    uint32_t value;
+};
+
+// Sub-Register 0x26:14 – GPIO_ISEN
+union dw1000_sub_reg_gpio_isen
+{
+    uint32_t value;
+};
+
+// Sub-Register 0x26:18 – GPIO_IMODE
+union dw1000_sub_reg_gpio_imode
+{
+    uint32_t value;
+};
+
+// Sub-Register 0x26:1C – GPIO_IBES
+union dw1000_sub_reg_gpio_ibes
+{
+    uint32_t value;
+};
+
+// Sub-Register 0x26:20 – GPIO_ICLR
+union dw1000_sub_reg_gpio_iclr
+{
+    uint32_t value;
+};
+
+// Sub-Register 0x26:24 – GPIO_IDBE
+union dw1000_sub_reg_gpio_idbe
+{
+    uint32_t value;
+};
+
+// Sub-Register 0x26:28 – GPIO_RAW
+union dw1000_sub_reg_gpio_raw
+{
+    uint32_t value;
+};
+
 // Register file: 0x26 – GPIO control and status
+union dw1000_reg_gpio_ctrl
+{
+    struct
+    {
+        union dw1000_sub_reg_gpio_mode gpio_mode;
+        uint32_t rsvd;
+        union dw1000_sub_reg_gpio_dir gpio_dir;
+        union dw1000_sub_reg_gpio_dout gpio_dout;
+        union dw1000_sub_reg_gpio_irqe gpio_irqe;
+        union dw1000_sub_reg_gpio_isen gpio_isen;
+        union dw1000_sub_reg_gpio_imode gpio_imode;
+        union dw1000_sub_reg_gpio_ibes gpio_ibes;
+        union dw1000_sub_reg_gpio_iclr gpio_iclr;
+        union dw1000_sub_reg_gpio_idbe gpio_idbe;
+        union dw1000_sub_reg_gpio_raw gpio_raw;
+    };
+    uint8_t value[44];
+};
 
 // Sub-Register 0x27:00 – DRX_RES1
 
@@ -1154,10 +1371,10 @@ struct dw1000_reg
 
 struct dw1000_trx_para
 {
-    uint8_t tx_chan;                    // Transmit channel
-    uint8_t rx_chan;                    // Receive channel
-    uint8_t tx_pcode;                   // Preamble code used in the transmitter
-    uint8_t rx_pcode;                   // Preamble code used in the receiver
+    enum dw1000_chan_sel tx_chan;       // Transmit channel
+    enum dw1000_chan_sel rx_chan;       // Receive channel
+    enum dw1000_pcode_sel tx_pcode;     // Preamble code used in the transmitter
+    enum dw1000_pcode_sel rx_pcode;     // Preamble code used in the receiver
     uint16_t tflen;                     // Transmit Frame Length (Data Length)
     enum dw1000_br_sel txbr_sel;        // Data Rate
     enum dw1000_prf_sel txprf_sel;      // PRF

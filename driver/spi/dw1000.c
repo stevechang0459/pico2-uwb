@@ -381,9 +381,24 @@ err:
     return -1;
 }
 
-int dw1000_sniff_mode_init(uint8_t type)
+void dw1000_ctx_init(struct dw1000_context *dw1000_ctx)
 {
+    dw1000_ctx->spi_cfg.spi        = SPI_INST;
+    dw1000_ctx->spi_cfg.spi_speed  = SPI_SPEED;
+    dw1000_ctx->spi_cfg.pin.sck    = SPI0_SCK_PIN;
+    dw1000_ctx->spi_cfg.pin.tx     = SPI0_TX_PIN;
+    dw1000_ctx->spi_cfg.pin.rx     = SPI0_RX_PIN;
+    dw1000_ctx->spi_cfg.pin.csn    = SPI0_CSN_PIN;
+    dw1000_ctx->spi_cfg.slave_mode = false;
 
+    // dw1000_ctx->trx_cfg.tx_chan    = DW1000_CHAN_5;
+    // dw1000_ctx->trx_cfg.tx_pcode   = DW1000_PCODE_9;
+
+    // dw1000_ctx->trx_cfg.rx_chan    = DW1000_CHAN_5;
+    // dw1000_ctx->trx_cfg.rx_pcode   = DW1000_PCODE_9;
+
+
+    // dw1000_ctx->irq_cfg = ...
 }
 
 int dw1000_init(const struct dw1000_context *dw1000_ctx)
@@ -393,34 +408,71 @@ int dw1000_init(const struct dw1000_context *dw1000_ctx)
 
     union dw1000_reg_sys_cfg sys_cfg = {
         // Disable Double-Buffered
-        .dis_drxb = 1,
+        .dis_drxb = true,
         .rxautr   = 0,
         // // Enable Double-Buffered
         // .dis_drxb = 0,
         // .rxautr   = 1,
+        .hirq_pol = DW1000_HIRQ_POL_ACTIVE_HIGH,
     };
     if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CFG, &sys_cfg, sizeof(sys_cfg)))
         goto err;
 
     union dw1000_reg_chan_ctrl chan_ctrl = {
-        .tx_chan  = trx_cfg->tx_chan,
-        .rx_chan  = trx_cfg->rx_chan,
-        .rxprf    = trx_cfg->rxprf_sel,
-        .tx_pcode = trx_cfg->tx_pcode,
-        .rx_pcode = trx_cfg->rx_pcode,
+        .tx_chan  = DW1000_CHAN_5,
+        .rx_chan  = DW1000_CHAN_5,
+        .rxprf    = DW1000_PRF_64MHZ,
+        .tx_pcode = DW1000_PCODE_9,
+        .rx_pcode = DW1000_PCODE_9,
     };
-    assert(trx_cfg->tx_chan == trx_cfg->rx_chan);
-    assert((trx_cfg->rxprf_sel == DW1000_PRF_16MHZ) || (trx_cfg->rxprf_sel == DW1000_PRF_64MHZ));
-    assert(trx_cfg->tx_pcode == trx_cfg->rx_pcode);
+    hard_assert(chan_ctrl.tx_chan == chan_ctrl.rx_chan);
+    hard_assert((chan_ctrl.rxprf == DW1000_PRF_16MHZ) || (chan_ctrl.rxprf == DW1000_PRF_64MHZ));
+    hard_assert(chan_ctrl.tx_pcode == chan_ctrl.rx_pcode);
     if (dw1000_non_indexed_write(spi_cfg, DW1000_CHAN_CTRL, &chan_ctrl, sizeof(chan_ctrl)))
         goto err;
 
+    union dw1000_sub_reg_gpio_mode gpio_mode = {.value = 0};
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_GPIO_CTRL, DW1000_GPIO_MODE, &gpio_mode, sizeof(gpio_mode)))
+        goto err;
 
+    // union dw1000_reg_tx_power tx_power = {0};
+
+    // union dw1000_reg_sniff_mode sniff_mode = {0};
+
+    // Clear the interrupt status
+    union dw1000_reg_sys_status sys_status = {.ofs_00.value = UINT32_MAX, .ofs_04.value = UINT8_MAX};
+    if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_STATUS, &sys_status, sizeof(sys_status)))
+        goto err;
+
+    // Set the interrupt mask
+    union dw1000_reg_sys_mask sys_mask = {
+        .mrxfcg = 1,
+        .mrxrfsl = 1,
+        .mrxrfto = 1,
+        .mldeerr = 1,
+        .mrxovrr = 1,
+        .mrxpto = 1,
+        .mgpioirq = 1,
+        .mslp2init = 1,
+        .mrfpllll = 1,
+        .mcpllll = 1,
+        .mrxsfdto = 1,
+        .mhpdwarn = 1,
+        .mtxberr = 1,
+        .maffrej = 1,
+    };
+    if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_MASK, &sys_mask, sizeof(sys_mask)))
+        goto err;
 
     return 0;
 err:
     printf("%s failed\n", __func__);
     return -1;
+}
+
+int dw1000_sniff_mode_init(uint8_t type)
+{
+
 }
 
 /**
@@ -687,17 +739,6 @@ int dw1000_reg_list_check()
     return 0;
 err:
     return -1;
-}
-
-void dw1000_ctx_init(struct dw1000_context *dw1000_ctx)
-{
-    dw1000_ctx->spi_cfg.spi        = SPI_INST;
-    dw1000_ctx->spi_cfg.spi_speed  = SPI_SPEED;
-    dw1000_ctx->spi_cfg.pin.sck    = SPI0_SCK_PIN;
-    dw1000_ctx->spi_cfg.pin.tx     = SPI0_TX_PIN;
-    dw1000_ctx->spi_cfg.pin.rx     = SPI0_RX_PIN;
-    dw1000_ctx->spi_cfg.pin.csn    = SPI0_CSN_PIN;
-    dw1000_ctx->spi_cfg.slave_mode = false;
 }
 
 #if (CONFIG_SPI_MASTER_MODE)

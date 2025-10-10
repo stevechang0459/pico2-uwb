@@ -49,7 +49,10 @@
 			"binary_info.h": "c",
 			"spi.h": "c",
 			"gpio.h": "c",
-			"io_bank0.h": "c"
+			"io_bank0.h": "c",
+			"assert.h": "c",
+			"_ansi.h": "c",
+			"config.h": "c"
 		}
 	}
 }

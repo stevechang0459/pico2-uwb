@@ -5,6 +5,7 @@
  */
 #include "pico/stdlib.h"
 #include <stdio.h>
+#include <assert.h>
 
 #include "print.h"
 #include "spi.h"
