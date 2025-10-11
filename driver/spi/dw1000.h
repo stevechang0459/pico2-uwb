@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <assert.h>
 
 #include "gpio.h"
 #include "spi.h"
@@ -144,6 +145,27 @@ enum dw1000_sub_reg_ofs_gpio_ctrl
     DW1000_GPIO_ICLR  = 0x20,
     DW1000_GPIO_IDBE  = 0x24,
     DW1000_GPIO_RAW   = 0x28,
+};
+
+enum dw1000_sub_reg_ofs_fs_ctrl
+{
+    DW1000_FS_RES1    = 0x00,
+    DW1000_FS_PLLCFG  = 0x07,
+    DW1000_FS_PLLTUNE = 0x0b,
+    DW1000_FS_RES2    = 0x0c,
+    DW1000_FS_XTALT   = 0x0e,
+    DW1000_FS_RES3    = 0x0f,
+};
+
+enum dw1000_sub_reg_ofs_rf_conf
+{
+    DW1000_RF_RF_CONF = 0x00,
+    DW1000_RF_RES1    = 0x04,
+    DW1000_RF_RXCTRLH = 0x0b,
+    DW1000_RF_TXCTRL  = 0x0c,
+    DW1000_RF_RES2    = 0x10,
+    DW1000_RF_STATUS  = 0x2c,
+    DW1000_LDOTUNE    = 0x30,
 };
 
 enum dw1000_reg_file_type
@@ -448,6 +470,23 @@ union dw1000_reg_dx_time
 // Register file: 0x0B – Reserved
 
 // Register file: 0x0C – Receive Frame Wait Timeout Period
+union dw1000_reg_rx_fwto
+{
+    struct
+    {
+        /**
+         * Bit[15:0] The Receive Frame Wait Timeout period is a 16-bit field.
+         * The units for this parameter are roughly 1μs, (the exact unit is 512
+         * counts of the fundamental 499.2 MHz UWB clock, or 1.026 μs).
+         *
+         * This parameter is specified in units of approximately 1 μs, or 128
+         * system clock cycles.
+         */
+        uint32_t rxfwto : 16;
+        uint32_t rsvd   : 16;           // Bit[31:16] Reserved
+    };
+    uint32_t value;
+};
 
 // Register file: 0x0D – System Control Register
 union dw1000_reg_sys_ctrl
@@ -766,7 +805,12 @@ union dw1000_reg_sniff_mode
     {
         uint32_t sniff_ont  : 4;        // Bit[3:0] SNIFF Mode ON time. (in units of PAC)
         uint32_t rsvd1      : 4;        // Bit[7:4] Reserved
-        uint32_t sniff_offt : 8;        // Bit[15:8] SNIFF Mode OFF time specified in μs.
+        /**
+         * Bit[15:8] SNIFF Mode OFF time specified in μs. This parameter is
+         * specified in units of approximately 1 μs, or 128 system clock cycles
+         * (= 128 * 8 ns = 128 * (1 / DW1000_SYS_CLOCK).
+         */
+        uint32_t sniff_offt : 8;
         uint32_t rsvd2      : 16;       // Bit[31:16] Reserved
     };
     uint32_t value;
@@ -993,21 +1037,149 @@ union dw1000_sub_reg_drx_pretoc
 
 // Register file: 0x27 – Digital receiver configuration
 
-// Sub-Register 0x28:00 – RF_CONF
+// Sub-Register 0x28:00 – RF_CONF, RF Configuration Register
+union dw1000_sub_reg_rf_conf
+{
+    struct
+    {
+        /**
+         * Bit[7:0] Reserved. These fields are reserved, and should not be set
+         * to 1 (may be overwritten with 0).
+         */
+        uint32_t rsvd1  : 8;
+        uint32_t txfen  : 5;            // Bit[12:8] Transmit block force enable.
+        /**
+         * Bit[15:13] PLL block force enables. Write 0x5 to enable the CLK_PLL
+         * or 0x7 to enable both the CLK_PLL and RF PLL.
+         */
+        uint32_t pllfen : 3;
+        /**
+         * Bit[20:16] Write 0x1F to force the enable to all LDO’s.
+         */
+        uint32_t ldofen : 5;
+        /**
+         * Bit[22:21] Force the TX/RX switch. To configure for TX the value
+         * written should be set to 0x2, and to configure for RX the value
+         * should be set to 0x1.
+         */
+        uint32_t txrxsw : 2;
+        /**
+         * Bit[31:23] Reserved. These fields are reserved, and should not be set
+         * to 1 (may be overwritten with 0).
+         */
+        uint32_t rsvd2  : 9;
+    };
+    uint32_t value;
+};
 
-// Sub-Register 0x28:04 – RF_RES1
+/**
+ * Sub-Register 0x28:04 – RF_RES1, Reserved area 1
+ *
+ * Register file: 0x28 – Analog RF configuration block, sub-register 0x04 is a
+ * reserved register. Please take care not to write to this register as doing so
+ * may cause the DW1000 to malfunction.
+ */
+union dw1000_sub_reg_rf_res1
+{
+    /**
+     * Byte[6:0] Reserved area 1.
+     *
+     * Please take care not to write to this register as doing so may cause the
+     * DW1000 to malfunction.
+     */
+    uint8_t value[7];
+};
 
-// Sub-Register 0x28:0B – RF_RXCTRLH
+// Sub-Register 0x28:0B – RF_RXCTRLH, Analog RX Control Register
+union dw1000_sub_reg_rf_rxctrlh
+{
+    uint8_t value;                      // Analog RX Control Register
+};
 
-// Sub-Register 0x28:0C – RF_TXCTRL
+// Sub-Register 0x28:0C – RF_TXCTRL, Analog TX Control Register
+union dw1000_sub_reg_rf_txctrl
+{
+    struct
+    {
+        uint16_t rsvd1   : 5;           // Bit[4:0] These fields are reserved. Program only as directed in Table 38.
+        uint16_t txmtune : 4;           // Bit[8:5] Transmit mixer tuning register.
+        uint16_t txmq    : 3;           // Bit[11:9] Transmit mixer Q-factor tuning register.
+        uint16_t rsvd2   : 4;           // Bit[15:12] Reserved.
+        uint8_t rsvd3;                  // Bit[23:16] Reserved.
+    };
+    uint8_t value[3];                   // Analog TX Control Register
+};
 
-// Sub-Register 0x28:10 – RF_RES2
+/**
+ * Sub-Register 0x28:10 – RF_RES2, Reserved area 2
+ *
+ * Register file: 0x28 – Analog RF configuration block, sub-register 0x10 is a
+ * reserved register. Please take care not to write to this register as doing so
+ * may cause the DW1000 to malfunction.
+ */
+union dw1000_sub_reg_rf_res2
+{
+    /**
+     * Byte[15:0] Reserved area 2.
+     *
+     * Please take care not to write to this register as doing so may cause the
+     * DW1000 to malfunction.
+     */
+    uint8_t value[16];
+};
 
-// Sub-Register 0x28:2C – RF_STATUS
+// Sub-Register 0x28:2C – RF_STATUS, RF Status Register
+union dw1000_sub_reg_rf_status
+{
+    struct
+    {
+        uint32_t cplllock  : 1;         // Bit[0] Clock PLL Lock status.
+        uint32_t cplllow   : 1;         // Bit[1] Clock PLL Low flag status bit.
+        uint32_t cpllhigh  : 1;         // Bit[2] Clock PLL High flag status bit.
+        uint32_t rfplllock : 1;         // Bit[3] RF PLL Lock status.
+        uint32_t rsvd      : 28;        // Bit[31:4] Reserved.
+    };
+    uint32_t value;
+};
 
 // Sub-Register 0x28:30 – LDOTUNE
+union dw1000_sub_reg_ldotune
+{
+    /**
+     * Byte[4:0] This register is used to control the output voltage levels of
+     * the on chip LDOs.
+     */
+    struct
+    {
+        uint32_t ldotune_l;
+        uint8_t ldotune_h;
+    };
+    uint8_t value[5];
+};
 
 // Register file: 0x28 – Analog RF configuration block
+union dw1000_reg_rf_conf
+{
+    struct
+    {
+        union dw1000_sub_reg_rf_conf rf_conf;       // Byte[3:0] RF Configuration Register.
+        /**
+         * Byte[10:4] Reserved area 1. Please take care not to write to this
+         * register as doing so may cause the DW1000 to malfunction.
+         */
+        union dw1000_sub_reg_rf_res1 rf_res1;
+        union dw1000_sub_reg_rf_rxctrlh rf_rxctrlh; // Byte[11] Analog RX Control Register.
+        union dw1000_sub_reg_rf_txctrl rf_txctrl;   // Byte[14:12] Analog TX Control Register.
+        uint8_t rsvd1;                              // Byte[15] Reserved1.
+        union dw1000_sub_reg_rf_res2 rf_res2;       // Byte[31:16] Reserved area 2.
+        uint8_t rsvd2[12];                          // Byte[43:32] Reserved2.
+        union dw1000_sub_reg_rf_status rf_status;   // Byte[47:44] RF Status Register.
+        union dw1000_sub_reg_ldotune ldotune;       // Byte[52:48] Internal LDO voltage tuning parameter.
+    };
+    uint8_t value[53];
+};
+
+_Static_assert(sizeof(union dw1000_reg_rf_conf) == 53, "union dw1000_reg_rf_conf must be 53 bytes");
 
 // Register file: 0x29 – Reserved
 
@@ -1027,19 +1199,136 @@ union dw1000_sub_reg_drx_pretoc
 
 // Register file: 0x2A – Transmitter Calibration block
 
-// Sub-Register 0x2B:00 – FS_RES1
+/**
+ * Sub-Register 0x2B:00 – FS_RES1
+ *
+ * Register file: 0x2B – Frequency synthesiser control block, sub-register 0x00
+ * is a reserved register. Please take care not to write to this area as doing
+ * so may cause the DW1000 to malfunction.
+ */
+union dw1000_sub_reg_fs_res1
+{
+    /**
+     * Byte[6:0] Frequency synthesiser – Reserved area 1. Please take care not
+     * to write to this area as doing so may cause the DW1000 to malfunction.
+     */
+    uint8_t rsvd[7];
+};
 
 // Sub-Register 0x2B:07 – FS_PLLCFG
+union dw1000_sub_reg_fs_pllcfg
+{
+    uint8_t value[4];                   // Byte[3:0] Frequency synthesiser – PLL configuration
+};
 
 // Sub-Register 0x2B:0B – FS_PLLTUNE
+union dw1000_sub_reg_fs_plltune
+{
+    uint8_t value;                      // Bit[7:0] Frequency synthesiser – PLL Tuning
+};
 
-// Sub-Register 0x2B:0C – FS_RES2
+/**
+ * Sub-Register 0x2B:0C – FS_RES2
+ *
+ * Register file: 0x2B – Frequency synthesiser control block, sub-register 0x0C
+ * is a reserved area. Please take care not to write to this area as doing so
+ * may cause the DW1000 to malfunction.
+ */
+union dw1000_sub_reg_fs_res2
+{
+    /**
+     * Byte[1:0] Frequency synthesiser – Reserved area 2. Please take care not
+     * to write to this area as doing so may cause the DW1000 to malfunction.
+     */
+    uint8_t rsvd[2];
+};
 
 // Sub-Register 0x2B:0E – FS_XTALT
+union dw1000_sub_reg_fs_xtalt
+{
+    struct
+    {
+        uint8_t fx_xtalt : 5;           // Bit[7:0] Frequency synthesiser – Crystal trim
+        /**
+         * Bit[7:5] Reserved.
+         *
+         * N.B.: Bits 7:5 must always be set to binary “011”. Failure to
+         * maintain this value will result in DW1000 malfunction. Any change in
+         * the value of this field will cause the DW1000 to malfunction.
+         */
+        uint8_t rsvd     : 3;
+    };
+    uint8_t value;
+};
 
-// Sub-Register 0x2B:0F – FS_RES3
+/**
+ * Sub-Register 0x2B:0F – FS_RES3
+ *
+ * Register file: 0x2B – Frequency synthesiser control block, sub-register 0x0F
+ * is a reserved area. Please take care not to write to this area as doing so
+ * may cause the DW1000 to malfunction.
+ */
+union dw1000_sub_reg_fs_res3
+{
+    /**
+     * Byte[5:0] Frequency synthesiser – Reserved area 3. Please take care not
+     * to write to this area as doing so may cause the DW1000 to malfunction.
+     */
+    uint8_t rsvd[6];
+};
 
 // Register file: 0x2B – Frequency synthesiser control block
+union dw1000_reg_fs_ctrl
+{
+    struct
+    {
+        /**
+         * Byte[6:0] Sub-Register 0x2B:00 – FS_RES1
+         *
+         * Reserved.
+         *
+         * Please take care not to write to this area as doing so may cause the
+         * DW1000 to malfunction.
+         */
+        union dw1000_sub_reg_fs_res1 rsvd1;
+        /**
+         * Byte[10:7] Sub-Register 0x2B:07 – FS_PLLCFG
+         *
+         * Frequency synthesiser – PLL configuration
+         */
+        union dw1000_sub_reg_fs_pllcfg fs_pllcfg;
+        /**
+         * Byte[11] Sub-Register 0x2B:0B – FS_PLLTUNE
+         *
+         * Frequency synthesiser – PLL Tuning
+         */
+        union dw1000_sub_reg_fs_plltune fs_plltune;
+        /**
+         * Byte[13:12] Sub-Register 0x2B:0C – FS_RES2
+         *
+         * Reserved.
+         *
+         * Please take care not to write to this area as doing so may cause the
+         * DW1000 to malfunction.
+         */
+        union dw1000_sub_reg_fs_res2 rsvd2;
+        /**
+         * Byte[14] Sub-Register 0x2B:0E – FS_XTALT
+         *
+         * Frequency synthesiser – Crystal trim
+         */
+        union dw1000_sub_reg_fs_xtalt fs_xtalt;
+        /**
+         * Byte[20:15] Sub-Register 0x2B:0F – FS_RES3
+         *
+         * Reserved.
+         *
+         * Please take care not to write to this area as doing so may cause the
+         * DW1000 to malfunction.
+         */
+        union dw1000_sub_reg_fs_res3 fs_res3;
+    };
+};
 
 // Sub-Register 0x2C:00 – AON_WCFG
 
