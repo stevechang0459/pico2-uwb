@@ -120,19 +120,6 @@ enum dw1000_sub_reg_ofs_aon
     DW1000_AON_CFG1 = 0x0a,
 };
 
-enum dw1000_sub_reg_ofs_drx_conf
-{
-    DW1000_DRX_TUNE0b   = 0x02,
-    DW1000_DRX_TUNE1a   = 0x04,
-    DW1000_DRX_TUNE1b   = 0x06,
-    DW1000_DRX_TUNE2    = 0x08,
-    DW1000_DRX_SFDTOC   = 0x20,
-    DW1000_DRX_PRETOC   = 0x24,
-    DW1000_DRX_TUNE4H   = 0x26,
-    DW1000_DRX_CAR_INT  = 0x28,
-    DW1000_RXPACC_NOSAT = 0x2c,
-};
-
 enum dw1000_sub_reg_ofs_gpio_ctrl
 {
     DW1000_GPIO_MODE  = 0x00,
@@ -166,6 +153,22 @@ enum dw1000_sub_reg_ofs_rf_conf
     DW1000_RF_RES2    = 0x10,
     DW1000_RF_STATUS  = 0x2c,
     DW1000_LDOTUNE    = 0x30,
+};
+
+enum dw1000_sub_reg_ofs_drx_conf
+{
+    DW1000_DRX_RES1     = 0x00, // Reserved area 1.
+    DW1000_DRX_TUNE0b   = 0x02, // Digital Tuning Register 0b.
+    DW1000_DRX_TUNE1a   = 0x04, // Digital Tuning Register 1a.
+    DW1000_DRX_TUNE1b   = 0x06, // Digital Tuning Register 1b.
+    DW1000_DRX_TUNE2    = 0x08, // Digital Tuning Register 2.
+    DW1000_DRX_RES2     = 0x0c, // Reserved area 2.
+    DW1000_DRX_SFDTOC   = 0x20, // SFD timeout.
+    DW1000_DRX_RES3     = 0x22, // Reserved area 3.
+    DW1000_DRX_PRETOC   = 0x24, // Preamble detection timeout.
+    DW1000_DRX_TUNE4H   = 0x26, // Digital Tuning Register 4H.
+    DW1000_DRX_CAR_INT  = 0x28, // Carrier Recovery Integrator Register.
+    DW1000_RXPACC_NOSAT = 0x2c, // Unsaturated accumulated preamble symbols.
 };
 
 enum dw1000_reg_file_type
@@ -364,41 +367,43 @@ union dw1000_reg_sys_cfg
 {
     struct
     {
-        uint32_t ffen       : 1;        // Frame Filtering Enable
-        uint32_t ffbc       : 1;        // Frame Filtering Behave as a Coordinator
-        uint32_t ffab       : 1;        // Frame Filtering Allow Beacon frame reception
-        uint32_t ffad       : 1;        // Frame Filtering Allow Acknowledgment frame reception
-        uint32_t ffaa       : 1;        // Frame Filtering Allow MAC command frame reception
-        uint32_t ffam       : 1;        // Frame Filtering Allow MAC command frame reception
-        uint32_t ffar       : 1;        // Frame Filtering Allow Reserved frame types
-        uint32_t ffa4       : 1;        // Frame Filtering Allow frames with frame type field of 4
+        uint32_t ffen       : 1;        // Bit[0] Frame Filtering Enable
+        uint32_t ffbc       : 1;        // Bit[1] Frame Filtering Behave as a Coordinator
+        uint32_t ffab       : 1;        // Bit[2] Frame Filtering Allow Beacon frame reception
+        uint32_t ffad       : 1;        // Bit[3] Frame Filtering Allow Acknowledgment frame reception
+        uint32_t ffaa       : 1;        // Bit[4] Frame Filtering Allow MAC command frame reception
+        uint32_t ffam       : 1;        // Bit[5] Frame Filtering Allow MAC command frame reception
+        uint32_t ffar       : 1;        // Bit[6] Frame Filtering Allow Reserved frame types
+        uint32_t ffa4       : 1;        // Bit[7] Frame Filtering Allow frames with frame type field of 4
         //
-        uint32_t ffa5       : 1;        // Frame Filtering Allow frames with frame type field of 5
-        uint32_t hirq_pol   : 1;        // Host interrupt polarity
-        uint32_t spi_edge   : 1;        // SPI data launch edge
-        uint32_t dis_fce    : 1;        // Disable frame check error handling
-        uint32_t dis_drxb   : 1;        // Disable Double RX Buffer
-        uint32_t dis_phe    : 1;        // Disable receiver abort on PHR error
-        uint32_t dis_rsde   : 1;        // Disable Receiver Abort on RSD error
+        uint32_t ffa5       : 1;        // Bit[8] Frame Filtering Allow frames with frame type field of 5
+        uint32_t hirq_pol   : 1;        // Bit[9] Host interrupt polarity
+        uint32_t spi_edge   : 1;        // Bit[10] SPI data launch edge
+        uint32_t dis_fce    : 1;        // Bit[11] Disable frame check error handling
+        uint32_t dis_drxb   : 1;        // Bit[12] Disable Double RX Buffer
+        uint32_t dis_phe    : 1;        // Bit[13] Disable receiver abort on PHR error
+        uint32_t dis_rsde   : 1;        // Bit[14] Disable Receiver Abort on RSD error
         /**
-         * This bit allows selection of the initial seed value for the FCS
-         * generation and checking function that is set at the start of each
+         * Bit[15] This bit allows selection of the initial seed value for the
+         * FCS generation and checking function that is set at the start of each
          * frame transmission and reception
          */
         uint32_t fcs_init2f : 1;
         //
-        uint32_t phr_mode   : 2;        // This configuration allows selection of PHR type to be one of two options.
-        uint32_t dis_stxp   : 1;        // Disable Smart TX Power control
-        uint32_t rsvd1      : 3;        // Reserved
-        uint32_t rxm110k    : 1;        // Receiver Mode 110 kbps data rate
-        uint32_t rsvd2      : 5;        // Reserved
-        uint32_t rxwtoe     : 1;        // Receive Wait Timeout Enable
-        uint32_t rxautr     : 1;        // Receiver Auto-Re-enable
-        uint32_t autoack    : 1;        // Automatic Acknowledgement Enable
-        uint32_t aackpend   : 1;        // Automatic Acknowledgement Pending bit control
+        uint32_t phr_mode   : 2;        // Bit[17:16] This configuration allows selection of PHR type to be one of two options.
+        uint32_t dis_stxp   : 1;        // Bit[18] Disable Smart TX Power control.
+        uint32_t rsvd1      : 3;        // Reserved.
+        uint32_t rxm110k    : 1;        // Bit[22] Receiver Mode 110 kbps data rate.
+        uint32_t rsvd2      : 5;        // Bit[27:23] Reserved.
+        uint32_t rxwtoe     : 1;        // Bit[28] Receive Wait Timeout Enable.
+        uint32_t rxautr     : 1;        // Bit[29] Receiver Auto-Re-enable.
+        uint32_t autoack    : 1;        // Bit[30] Automatic Acknowledgement Enable.
+        uint32_t aackpend   : 1;        // Bit[31] Automatic Acknowledgement Pending bit control.
     };
     uint32_t value;
 };
+
+_Static_assert(sizeof(union dw1000_reg_sys_cfg) == 4, "union dw1000_reg_sys_cfg must be 4 bytes");
 
 // Register file: 0x05 – Reserved
 
@@ -869,19 +874,21 @@ union dw1000_reg_tx_power
     {
         uint32_t na1      : 8;          // Bit[7:0] Not applicable = 0x22
         /**
-         * Bit[15:8] This power setting is applied during the transmission of the PHY
-         * header (PHR) portion of the frame.
+         * Bit[15:8] This power setting is applied during the transmission of
+         * the PHY header (PHR) portion of the frame.
          */
         uint32_t txpowphr : 8;
         /**
-         * Bit[23:16] This power setting is applied during the transmission of the
-         * synchronisation header (SHR) and data portions of the frame.
+         * Bit[23:16] This power setting is applied during the transmission of
+         * the synchronisation header (SHR) and data portions of the frame.
          */
         uint32_t txpowsd  : 8;
         uint32_t na2      : 8;          // Bit[31:24] Not applicable = 0x0E
     };
     uint32_t value;
 };
+
+_Static_assert(sizeof(union dw1000_reg_tx_power) == 4, "union dw1000_reg_tx_power must be 4 bytes");
 
 // Register file: 0x1F – Channel Control
 union dw1000_reg_chan_ctrl
@@ -916,8 +923,24 @@ union dw1000_reg_chan_ctrl
 // Sub-Register 0x26:00 – GPIO_MODE
 union dw1000_sub_reg_gpio_mode
 {
+    struct
+    {
+        uint32_t rsvd1 : 6; // Bit[5:0] Reserved.
+        uint32_t msgp0 : 2; // Bit[7:6] Mode Selection for GPIO0/RXOKLED.
+        uint32_t msgp1 : 2; // Bit[9:8] Mode Selection for GPIO1/SFDLED.
+        uint32_t msgp2 : 2; // Bit[11:10] Mode Selection for GPIO2/RXLED.
+        uint32_t msgp3 : 2; // Bit[13:12] Mode Selection for GPIO3/TXLED.
+        uint32_t msgp4 : 2; // Bit[15:14] Mode Selection for GPIO4/EXTPA.
+        uint32_t msgp5 : 2; // Bit[17:16] Mode Selection for GPIO5/EXTTXE.
+        uint32_t msgp6 : 2; // Bit[19:18] Mode Selection for GPIO6/EXTRXE.
+        uint32_t msgp7 : 2; // Bit[21:20] Mode Selection for SYNC/GPIO7.
+        uint32_t msgp8 : 2; // Bit[23:22] Mode Selection for IRQ/GPIO8.
+        uint32_t rsvd2 : 8; // Bit[31:24] Reserved.
+    };
     uint32_t value;
 };
+
+_Static_assert(sizeof(union dw1000_sub_reg_gpio_mode) == 4, "union dw1000_sub_reg_gpio_mode must be 4 bytes");
 
 // Sub-Register 0x26:04 – Reserved
 
@@ -995,47 +1018,140 @@ union dw1000_reg_gpio_ctrl
     uint8_t value[44];
 };
 
-// Sub-Register 0x27:00 – DRX_RES1
-
-// Sub-Register 0x27:02 – DRX_TUNE0b
-
-// Sub-Register 0x27:04 – DRX_TUNE1a
-
-// Sub-Register 0x27:06 – DRX_TUNE1b
-
-// Sub-Register 0x27:08 – DRX_TUNE2
-union dw1000_sub_reg_drx_tune2
+/**
+ * Sub-Register 0x27:00 – DRX_RES1, Reserved area 1.
+ *
+ * Register file: 0x27 – Digital receiver configuration, sub-register 0x00 is a
+ * reserved area. Please take care not to write to this register as doing so may
+ * cause the DW1000 to malfunction.
+ */
+union dw1000_sub_reg_drx_res1
 {
-    struct
-    {
-        uint32_t drx_tun2;              // Digital Tuning Register 2. RW
-    };
-    uint32_t value;
+    /**
+     * Byte[1:0] Reserved. Please take care not to write to this register as
+     * doing so may cause the DW1000 to malfunction.
+     */
+    uint8_t value[2];
 };
 
-// Sub-Register 0x27:0C – DRX_RES2
+// Sub-Register 0x27:02 – DRX_TUNE0b, Digital Tuning Register 0b.
+union dw1000_sub_reg_drx_tune0b
+{
+    uint16_t value;                     // Bit[15:0] Digital Tuning Register 0b.
+};
 
-// Sub-Register 0x27:20 – DRX_SFDTOC
+// Sub-Register 0x27:04 – DRX_TUNE1a, Digital Tuning Register 1a.
+union dw1000_sub_reg_drx_tune1a
+{
+    uint16_t value;                     // Bit[15:0] Digital Tuning Register 0b.
+};
 
-// Sub-Register 0x27:22 – DRX_RES3
+// Sub-Register 0x27:06 – DRX_TUNE1b, Digital Tuning Register 1b.
+union dw1000_sub_reg_drx_tune1b
+{
+    uint16_t value;                     // Bit[15:0] Digital Tuning Register 0b.
+};
 
-// Sub-Register 0x27:24 – DRX_PRETOC
+// Sub-Register 0x27:08 – DRX_TUNE2, Digital Tuning Register 2.
+union dw1000_sub_reg_drx_tune2
+{
+    uint32_t value;                     // Bit[31:0] RW, Digital Tuning Register 2.
+};
+
+/**
+ * Sub-Register 0x27:0C – DRX_RES2, Reserved area 2.
+ *
+ * Register file: 0x27 – Digital receiver configuration, from offset 0x0C to
+ * offset 0x1F inclusive is a reserved area. Please take care not to write to
+ * this area as doing so may cause the DW1000 to malfunction.
+ */
+union dw1000_sub_reg_drx_res2
+{
+    /**
+     * Byte[19:0] Reserved. Please take care not to write to this register as
+     * doing so may cause the DW1000 to malfunction.
+     */
+    uint8_t value[20];
+};
+
+// Sub-Register 0x27:20 – DRX_SFDTOC, SFD detection timeout count
+union dw1000_sub_reg_drx_stdtoc
+{
+    uint16_t value;                     // Bit[15:0] SFD detection timeout count (in units of preamble symbols).
+};
+
+/**
+ * Sub-Register 0x27:22 – DRX_RES3, Reserved area 3.
+ *
+ * Register file: 0x27 – Digital receiver configuration, sub-register 0x22 is a
+ * reserved area. Please take care not to write to this register as doing so may
+ * cause the DW1000 to malfunction.
+ */
+union dw1000_sub_reg_drx_res3
+{
+    /**
+     * Byte[1:0] Reserved. Please take care not to write to this register as
+     * doing so may cause the DW1000 to malfunction.
+     */
+    uint8_t value[2];
+};
+
+// Sub-Register 0x27:24 – DRX_PRETOC, Preamble detection timeout count
 union dw1000_sub_reg_drx_pretoc
 {
-    struct
-    {
-        uint16_t drx_pretoc;            // Preamble detection timeout count (in units of PAC size symbols)
-    };
+    uint16_t value;                     // Bit[15:0] Preamble detection timeout count (in units of PAC size symbols).
+};
+
+// Sub-Register 0x27:26 – DRX_TUNE4H, Digital Tuning Register 4h.
+union dw1000_sub_reg_drx_tune4h
+{
+    uint16_t value;                     // Bit[15:0] Digital Tuning Register 4h.
+};
+
+// Sub-Register 0x27:28 – DRX_CAR_INT, Carrier Recovery Integrator Register.
+union dw1000_sub_reg_drx_car_int
+{
+    /**
+     * Bit[20:0] RO, Carrier Recovery Integrator Register
+     *
+     * Register file: 0x27 – Digital receiver configuration, sub-register 0x28
+     * is a read-only 21 bit register.
+     */
+    uint8_t value[3];
+};
+
+// Sub-Register 0x27:2C – RXPACC_NOSAT, Unsaturated accumulated preamble symbols.
+union dw1000_sub_reg_rxpacc_nosat
+{
+    /**
+     * Bit[15:0] RO, Digital debug register. Unsaturated accumulated preamble
+     * symbols.
+     */
     uint16_t value;
 };
 
-// Sub-Register 0x27:26 – DRX_TUNE4H
-
-// Sub-Register 0x27:28 – DRX_CAR_INT
-
-// Sub-Register 0x27:2C – RXPACC_NOSAT
-
 // Register file: 0x27 – Digital receiver configuration
+union dw1000_reg_drx_conf
+{
+    struct
+    {
+        union dw1000_sub_reg_drx_res1 drx_res1;         // Byte[1:0] Reserved area 1.
+        union dw1000_sub_reg_drx_tune0b drx_tune0b;     // Byte[3:2] Digital Tuning Register 0b.
+        union dw1000_sub_reg_drx_tune1a drx_tune1a;     // Byte[5:4] Digital Tuning Register 1a.
+        union dw1000_sub_reg_drx_tune1b drx_tune1b;     // Byte[7:6] Digital Tuning Register 1b.
+        union dw1000_sub_reg_drx_tune2 drx_tune2;       // Byte[11:8] Digital Tuning Register 2.4
+        union dw1000_sub_reg_drx_res2 drx_res2;         // Byte[31:12] Reserved area 2.
+        union dw1000_sub_reg_drx_stdtoc drx_stdtoc;     // Byte[33:32] SFD detection timeout count.
+        union dw1000_sub_reg_drx_res3 drx_res3;         // Byte[35:34] Reserved area 3.
+        union dw1000_sub_reg_drx_pretoc drx_pretoc;     // Byte[37:36] Preamble detection timeout count.
+        union dw1000_sub_reg_drx_tune4h drx_tune4h;     // Byte[39:38] Digital Tuning Register.
+        union dw1000_sub_reg_drx_car_int drx_car_int;   // Byte[42:40] Carrier Recovery Integrator Register.
+        uint8_t rsvd;                                   // Byte[43] Reserved.
+        union dw1000_sub_reg_rxpacc_nosat rxpacc_nosat; // Byte[45:44] Unsaturated accumulated preamble symbols.
+    };
+};
+
+_Static_assert(sizeof(union dw1000_reg_drx_conf) == 46, "union dw1000_reg_drx_conf must be 46 bytes");
 
 // Sub-Register 0x28:00 – RF_CONF, RF Configuration Register
 union dw1000_sub_reg_rf_conf
@@ -1093,10 +1209,14 @@ union dw1000_sub_reg_rf_res1
 // Sub-Register 0x28:0B – RF_RXCTRLH, Analog RX Control Register
 union dw1000_sub_reg_rf_rxctrlh
 {
-    uint8_t value;                      // Analog RX Control Register
+    uint8_t value;                      // Bit[7:0] Analog RX Control Register
 };
 
-// Sub-Register 0x28:0C – RF_TXCTRL, Analog TX Control Register
+/**
+ * Sub-Register 0x28:0C – RF_TXCTRL, Analog TX Control Register
+ *
+ * Default: 0x1e3de0, RF_TXCTRL is not set to the optimum values by default.
+ */
 union dw1000_sub_reg_rf_txctrl
 {
     struct
@@ -1107,8 +1227,10 @@ union dw1000_sub_reg_rf_txctrl
         uint16_t rsvd2   : 4;           // Bit[15:12] Reserved.
         uint8_t rsvd3;                  // Bit[23:16] Reserved.
     };
-    uint8_t value[3];                   // Analog TX Control Register
+    uint8_t value[3];
 };
+
+_Static_assert(sizeof(union dw1000_sub_reg_rf_txctrl) == 3, "union dw1000_sub_reg_rf_txctrl must be 3 bytes");
 
 /**
  * Sub-Register 0x28:10 – RF_RES2, Reserved area 2
@@ -1685,7 +1807,37 @@ struct dw1000_context
 {
     struct spi_config spi_cfg;
     struct gpio_irq_config irq_cfg;
+    /**
+     * System Configuration
+     */
+    union dw1000_reg_sys_cfg sys_cfg;
+    union dw1000_reg_rx_fwto rx_fwto;
+    union dw1000_sub_reg_gpio_mode gpio_mode;
+    union dw1000_reg_sniff_mode sniff_mode;
+    /**
+     * Channel Configuration
+     */
+    union dw1000_reg_chan_ctrl chan_ctrl;
+    union dw1000_reg_fs_ctrl fs_ctrl;
+    /**
+     * Transmitter Configuration
+     */
+    union dw1000_reg_tx_fctrl tx_fctrl;
+    union dw1000_reg_tx_power tx_power;
+    /**
+     * Receiver Configuration
+     */
+    union dw1000_reg_drx_conf drx_conf;
+    union dw1000_reg_rf_conf rf_conf;
+    /**
+     * MICS.
+     */
+    union dw1000_reg_sys_status sys_status;
+    union dw1000_reg_sys_mask sys_mask;
+    //
     struct dw1000_trx_para trx_cfg;
+    bool is_standard_sfd;
+    bool is_txprf_16mhz;
 };
 
 void dw1000_ctx_init(struct dw1000_context *dw1000_ctx);
