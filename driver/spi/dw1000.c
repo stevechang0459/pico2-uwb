@@ -86,29 +86,22 @@ static struct dw1000_reg dw1000_regs[] =
     NULL
 };
 
-static struct dw1000_reg dw1000_fs_ctrl_sub_regs[] =
+// Register file: 0x23 –AGC configuration and control overview
+static struct dw1000_reg dw1000_agc_ctrl_sub_regs[] =
 {
-    {.reg_file_id = DW1000_FS_RES1,     .length = 7,    .reg_file_type = DW1000_RW,  .mnemonic = "FS_RES1",    .desc = "Frequency synthesiser - Reserved area 1"},
-    {.reg_file_id = DW1000_FS_PLLCFG,   .length = 4,    .reg_file_type = DW1000_RW,  .mnemonic = "FS_PLLCFG",  .desc = "Frequency synthesiser - PLL configuration"},
-    {.reg_file_id = DW1000_FS_PLLTUNE,  .length = 1,    .reg_file_type = DW1000_RW,  .mnemonic = "FS_PLLTUNE", .desc = "Frequency synthesiser - PLL Tuning"},
-    {.reg_file_id = DW1000_FS_RES2,     .length = 2,    .reg_file_type = DW1000_RW,  .mnemonic = "FS_RES2",    .desc = "Frequency synthesiser - Reserved area 2"},
-    {.reg_file_id = DW1000_FS_XTALT,    .length = 1,    .reg_file_type = DW1000_RW,  .mnemonic = "FS_XTALT",   .desc = "Frequency synthesiser - Crystal trim"},
-    {.reg_file_id = DW1000_FS_RES3,     .length = 6,    .reg_file_type = DW1000_RW,  .mnemonic = "FS_RES3",    .desc = "Frequency synthesiser - Reserved area 3"},
+    DW1000_SUB_REG_DESC(AGC_RES1,  RO, "Reserved area 1"),
+    DW1000_SUB_REG_DESC(AGC_CTRL1, RW, "AGC Control 1"),
+    DW1000_SUB_REG_DESC(AGC_TUNE1, RW, "AGC Tuning register 1"),
+    DW1000_SUB_REG_DESC(AGC_RES2,  RO, "Reserved area 2"),
+    DW1000_SUB_REG_DESC(AGC_TUNE2, RW, "AGC Tuning register 2"),
+    DW1000_SUB_REG_DESC(AGC_RES3,  RO, "Reserved area 3"),
+    DW1000_SUB_REG_DESC(AGC_TUNE3, RW, "AGC Tuning register 3"),
+    DW1000_SUB_REG_DESC(AGC_RES4,  RO, "Reserved area 4"),
+    DW1000_SUB_REG_DESC(AGC_STAT1, RO, "AGC Status"),
     NULL
 };
 
-static struct dw1000_reg dw1000_rf_conf_sub_regs[] =
-{
-    {.reg_file_id = DW1000_RF_RF_CONF,  .length = 4,    .reg_file_type = DW1000_RW,  .mnemonic = "RF_CONF",    .desc = "RF Configuration Register"},
-    {.reg_file_id = DW1000_RF_RES1,     .length = 7,    .reg_file_type = DW1000_RW,  .mnemonic = "RF_RES1",    .desc = "Reserved area 1"},
-    {.reg_file_id = DW1000_RF_RXCTRLH,  .length = 1,    .reg_file_type = DW1000_RW,  .mnemonic = "RF_RXCTRLH", .desc = "Analog RX Control Register"},
-    {.reg_file_id = DW1000_RF_TXCTRL,   .length = 3,    .reg_file_type = DW1000_RW,  .mnemonic = "RF_TXCTRL",  .desc = "Analog TX Control Register"},
-    {.reg_file_id = DW1000_RF_RES2,     .length = 16,   .reg_file_type = DW1000_RW,  .mnemonic = "RF_RES2",    .desc = "Reserved area 2"},
-    {.reg_file_id = DW1000_RF_STATUS,   .length = 4,    .reg_file_type = DW1000_RW,  .mnemonic = "RF_STATUS",  .desc = "RF Status Register"},
-    {.reg_file_id = DW1000_LDOTUNE,     .length = 5,    .reg_file_type = DW1000_RW,  .mnemonic = "LDOTUNE",    .desc = "LDO voltage tuning"},
-    NULL
-};
-
+// Register file: 0x27 - Digital receiver configuration overview
 static struct dw1000_reg dw1000_drx_conf_sub_regs[] =
 {
     {.reg_file_id = DW1000_DRX_RES1,    .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "DRX_RES1",    .desc = "Reserved area 1"},
@@ -123,6 +116,31 @@ static struct dw1000_reg dw1000_drx_conf_sub_regs[] =
     {.reg_file_id = DW1000_DRX_TUNE4H,  .length = 2,    .reg_file_type = DW1000_RW,  .mnemonic = "DRX_TUNE4H",  .desc = "Digital Tuning Register 4H"},
     {.reg_file_id = DW1000_DRX_CAR_INT, .length = 3,    .reg_file_type = DW1000_RO,  .mnemonic = "DRX_CAR_INT", .desc = "Carrier Recovery Integrator Register"},
     {.reg_file_id = DW1000_RXPACC_NOSAT,.length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "RXPACC_NOSAT",.desc = "Unsaturated accumulated preamble symbols"},
+    NULL
+};
+
+// Register file: 0x28 - Analog RF configuration block overview
+static struct dw1000_reg dw1000_rf_conf_sub_regs[] =
+{
+    {.reg_file_id = DW1000_RF_RF_CONF,  .length = 4,    .reg_file_type = DW1000_RW,  .mnemonic = "RF_CONF",    .desc = "RF Configuration Register"},
+    {.reg_file_id = DW1000_RF_RES1,     .length = 7,    .reg_file_type = DW1000_RW,  .mnemonic = "RF_RES1",    .desc = "Reserved area 1"},
+    {.reg_file_id = DW1000_RF_RXCTRLH,  .length = 1,    .reg_file_type = DW1000_RW,  .mnemonic = "RF_RXCTRLH", .desc = "Analog RX Control Register"},
+    {.reg_file_id = DW1000_RF_TXCTRL,   .length = 3,    .reg_file_type = DW1000_RW,  .mnemonic = "RF_TXCTRL",  .desc = "Analog TX Control Register"},
+    {.reg_file_id = DW1000_RF_RES2,     .length = 16,   .reg_file_type = DW1000_RW,  .mnemonic = "RF_RES2",    .desc = "Reserved area 2"},
+    {.reg_file_id = DW1000_RF_STATUS,   .length = 4,    .reg_file_type = DW1000_RW,  .mnemonic = "RF_STATUS",  .desc = "RF Status Register"},
+    {.reg_file_id = DW1000_LDOTUNE,     .length = 5,    .reg_file_type = DW1000_RW,  .mnemonic = "LDOTUNE",    .desc = "LDO voltage tuning"},
+    NULL
+};
+
+// Register file: 0x2B - Frequency synthesiser control block overview
+static struct dw1000_reg dw1000_fs_ctrl_sub_regs[] =
+{
+    {.reg_file_id = DW1000_FS_RES1,     .length = 7,    .reg_file_type = DW1000_RW,  .mnemonic = "FS_RES1",    .desc = "Frequency synthesiser - Reserved area 1"},
+    {.reg_file_id = DW1000_FS_PLLCFG,   .length = 4,    .reg_file_type = DW1000_RW,  .mnemonic = "FS_PLLCFG",  .desc = "Frequency synthesiser - PLL configuration"},
+    {.reg_file_id = DW1000_FS_PLLTUNE,  .length = 1,    .reg_file_type = DW1000_RW,  .mnemonic = "FS_PLLTUNE", .desc = "Frequency synthesiser - PLL Tuning"},
+    {.reg_file_id = DW1000_FS_RES2,     .length = 2,    .reg_file_type = DW1000_RW,  .mnemonic = "FS_RES2",    .desc = "Frequency synthesiser - Reserved area 2"},
+    {.reg_file_id = DW1000_FS_XTALT,    .length = 1,    .reg_file_type = DW1000_RW,  .mnemonic = "FS_XTALT",   .desc = "Frequency synthesiser - Crystal trim"},
+    {.reg_file_id = DW1000_FS_RES3,     .length = 6,    .reg_file_type = DW1000_RW,  .mnemonic = "FS_RES3",    .desc = "Frequency synthesiser - Reserved area 3"},
     NULL
 };
 
@@ -1296,6 +1314,19 @@ void dw1000_spi_master_test(const struct dw1000_context *dw1000_ctx)
                 };
                 printf("chan_ctrl->tx_pcode         : %d (%s)\n", chan_ctrl->tx_pcode, pcode[chan_ctrl->tx_pcode]);
                 printf("chan_ctrl->rx_pcode         : %d (%s)\n", chan_ctrl->rx_pcode, pcode[chan_ctrl->rx_pcode]);
+                break;
+
+            case DW1000_AGC_CTRL:
+                for (struct dw1000_reg *sub_reg = dw1000_agc_ctrl_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
+                    if ((sub_reg->length > 64) || (sub_reg->length == 0))
+                        continue;
+
+                    memset(rx_buf, 0, sub_reg->length);
+                    if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
+                        goto err;
+
+                    print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
+                }
                 break;
 
             case DW1000_DRX_CONF:
