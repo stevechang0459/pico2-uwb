@@ -47,7 +47,7 @@
 #define DX_TIME_NS(t)                   ((uint64_t)(t) * DW1000_SAMPLING_CLOCK / 1000000000ULL)
 
 // DW1000 Register File IDs
-enum dw1000_reg_file_id
+enum DW1000_REG_FILE_ID
 {
     DW1000_DEV_ID     = 0x00,
     DW1000_EUI        = 0x01,
@@ -91,87 +91,97 @@ enum dw1000_reg_file_id
     DW1000_REG_FILE_ID_MAX = 0x40
 };
 
-enum dw1000_sub_reg_ofs_dig_diag
+// DW1000 Sub-Register Offsets
+enum DW1000_SUB_REG_OFS
 {
-    DW1000_EVC_CTRL = 0x00,
-    DW1000_EVC_PHE  = 0x04,
-    DW1000_EVC_RSE  = 0x06,
-    DW1000_EVC_FCG  = 0x08,
-    DW1000_EVC_FCE  = 0x0a,
-    DW1000_EVC_FFR  = 0x0c,
-    DW1000_EVC_OVR  = 0x0e,
-    DW1000_EVC_STO  = 0x10,
-    DW1000_EVC_PTO  = 0x12,
-    DW1000_EVC_FWTO = 0x14,
-    DW1000_EVC_TXFS = 0x16,
-    DW1000_EVC_HPW  = 0x18,
-    DW1000_EVC_TPW  = 0x1a,
-    DW1000_EVC_RES1 = 0x1d,
-    DW1000_EVC_TMC  = 0x24,
+    // Register file: 0x26 – GPIO control and status overview
+    DW1000_GPIO_MODE    = 0x00,
+    DW1000_GPIO_DIR     = 0x08,
+    DW1000_GPIO_DOUT    = 0x0c,
+    DW1000_GPIO_IRQE    = 0x10,
+    DW1000_GPIO_ISEN    = 0x14,
+    DW1000_GPIO_IMODE   = 0x18,
+    DW1000_GPIO_IBES    = 0x1c,
+    DW1000_GPIO_ICLR    = 0x20,
+    DW1000_GPIO_IDBE    = 0x24,
+    DW1000_GPIO_RAW     = 0x28,
+
+    // Register file: 0x27 – Digital receiver configuration overview
+    DW1000_DRX_RES1     = 0x00,         // Reserved area 1.
+    DW1000_DRX_TUNE0b   = 0x02,         // Digital Tuning Register 0b.
+    DW1000_DRX_TUNE1a   = 0x04,         // Digital Tuning Register 1a.
+    DW1000_DRX_TUNE1b   = 0x06,         // Digital Tuning Register 1b.
+    DW1000_DRX_TUNE2    = 0x08,         // Digital Tuning Register 2.
+    DW1000_DRX_RES2     = 0x0c,         // Reserved area 2.
+    DW1000_DRX_SFDTOC   = 0x20,         // SFD timeout.
+    DW1000_DRX_RES3     = 0x22,         // Reserved area 3.
+    DW1000_DRX_PRETOC   = 0x24,         // Preamble detection timeout.
+    DW1000_DRX_TUNE4H   = 0x26,         // Digital Tuning Register 4H.
+    DW1000_DRX_CAR_INT  = 0x28,         // Carrier Recovery Integrator Register.
+    DW1000_RXPACC_NOSAT = 0x2c,         // Unsaturated accumulated preamble symbols.
+
+    // Register file: 0x28 – Analog RF configuration block overview
+    DW1000_RF_RF_CONF   = 0x00,
+    DW1000_RF_RES1      = 0x04,
+    DW1000_RF_RXCTRLH   = 0x0b,
+    DW1000_RF_TXCTRL    = 0x0c,
+    DW1000_RF_RES2      = 0x10,
+    DW1000_RF_STATUS    = 0x2c,
+    DW1000_LDOTUNE      = 0x30,
+
+    // Register file: 0x2B – Frequency synthesiser control block overview
+    DW1000_FS_RES1      = 0x00,
+    DW1000_FS_PLLCFG    = 0x07,
+    DW1000_FS_PLLTUNE   = 0x0b,
+    DW1000_FS_RES2      = 0x0c,
+    DW1000_FS_XTALT     = 0x0e,
+    DW1000_FS_RES3      = 0x0f,
+
+    // Register file: 0x2C – Always-on system control overview
+    DW1000_AON_WCFG     = 0x00,
+    DW1000_AON_CTRL     = 0x02,
+    DW1000_AON_RDAT     = 0x03,
+    DW1000_AON_ADDR     = 0x04,
+    DW1000_AON_CFG0     = 0x06,
+    DW1000_AON_CFG1     = 0x0a,
+
+    // Register file: 0x2D – OTP Memory Interface overview
+    DW1000_OTP_WDAT     = 0x00,         // OTP Write Data
+    DW1000_OTP_ADDR     = 0x04,         // OTP Address
+    DW1000_OTP_CTRL     = 0x06,         // OTP Control
+    DW1000_OTP_STAT     = 0x08,         // OTP Status
+    DW1000_OTP_RDAT     = 0x0a,         // OTP Read Data
+    DW1000_OTP_SRDAT    = 0x0e,         // OTP SR Read Data
+    DW1000_OTP_SF       = 0x12,         // OTP Special Function
+
+    // Register file: 0x2F – Digital Diagnostics Interface overview
+    DW1000_EVC_CTRL     = 0x00,
+    DW1000_EVC_PHE      = 0x04,
+    DW1000_EVC_RSE      = 0x06,
+    DW1000_EVC_FCG      = 0x08,
+    DW1000_EVC_FCE      = 0x0a,
+    DW1000_EVC_FFR      = 0x0c,
+    DW1000_EVC_OVR      = 0x0e,
+    DW1000_EVC_STO      = 0x10,
+    DW1000_EVC_PTO      = 0x12,
+    DW1000_EVC_FWTO     = 0x14,
+    DW1000_EVC_TXFS     = 0x16,
+    DW1000_EVC_HPW      = 0x18,
+    DW1000_EVC_TPW      = 0x1a,
+    DW1000_EVC_RES1     = 0x1d,
+    DW1000_EVC_TMC      = 0x24,
+
+    // Register file: 0x36 – Power Management and System Control overview
+    DW1000_PMSC_CTRL0   = 0x00,         // PMSC Control Register 0
+    DW1000_PMSC_CTRL1   = 0x04,         // PMSC Control Register 1
+    DW1000_PMSC_RES1    = 0x08,         // PMSC reserved area 1
+    DW1000_PMSC_SNOZT   = 0x0c,         // PMSC Snooze Time Register
+    DW1000_PMSC_RES2    = 0x10,         // PMSC reserved area 2
+    DW1000_PMSC_TXFSEQ  = 0x26,         // PMSC fine grain TX sequencing control
+    DW1000_PMSC_LEDC    = 0x28,         // PMSC LED Control Register
 };
 
-enum dw1000_sub_reg_ofs_aon
-{
-    DW1000_AON_WCFG = 0x00,
-    DW1000_AON_CTRL = 0x02,
-    DW1000_AON_RDAT = 0x03,
-    DW1000_AON_ADDR = 0x04,
-    DW1000_AON_CFG0 = 0x06,
-    DW1000_AON_CFG1 = 0x0a,
-};
-
-enum dw1000_sub_reg_ofs_gpio_ctrl
-{
-    DW1000_GPIO_MODE  = 0x00,
-    DW1000_GPIO_DIR   = 0x08,
-    DW1000_GPIO_DOUT  = 0x0c,
-    DW1000_GPIO_IRQE  = 0x10,
-    DW1000_GPIO_ISEN  = 0x14,
-    DW1000_GPIO_IMODE = 0x18,
-    DW1000_GPIO_IBES  = 0x1c,
-    DW1000_GPIO_ICLR  = 0x20,
-    DW1000_GPIO_IDBE  = 0x24,
-    DW1000_GPIO_RAW   = 0x28,
-};
-
-enum dw1000_sub_reg_ofs_fs_ctrl
-{
-    DW1000_FS_RES1    = 0x00,
-    DW1000_FS_PLLCFG  = 0x07,
-    DW1000_FS_PLLTUNE = 0x0b,
-    DW1000_FS_RES2    = 0x0c,
-    DW1000_FS_XTALT   = 0x0e,
-    DW1000_FS_RES3    = 0x0f,
-};
-
-enum dw1000_sub_reg_ofs_rf_conf
-{
-    DW1000_RF_RF_CONF = 0x00,
-    DW1000_RF_RES1    = 0x04,
-    DW1000_RF_RXCTRLH = 0x0b,
-    DW1000_RF_TXCTRL  = 0x0c,
-    DW1000_RF_RES2    = 0x10,
-    DW1000_RF_STATUS  = 0x2c,
-    DW1000_LDOTUNE    = 0x30,
-};
-
-enum dw1000_sub_reg_ofs_drx_conf
-{
-    DW1000_DRX_RES1     = 0x00, // Reserved area 1.
-    DW1000_DRX_TUNE0b   = 0x02, // Digital Tuning Register 0b.
-    DW1000_DRX_TUNE1a   = 0x04, // Digital Tuning Register 1a.
-    DW1000_DRX_TUNE1b   = 0x06, // Digital Tuning Register 1b.
-    DW1000_DRX_TUNE2    = 0x08, // Digital Tuning Register 2.
-    DW1000_DRX_RES2     = 0x0c, // Reserved area 2.
-    DW1000_DRX_SFDTOC   = 0x20, // SFD timeout.
-    DW1000_DRX_RES3     = 0x22, // Reserved area 3.
-    DW1000_DRX_PRETOC   = 0x24, // Preamble detection timeout.
-    DW1000_DRX_TUNE4H   = 0x26, // Digital Tuning Register 4H.
-    DW1000_DRX_CAR_INT  = 0x28, // Carrier Recovery Integrator Register.
-    DW1000_RXPACC_NOSAT = 0x2c, // Unsaturated accumulated preamble symbols.
-};
-
-enum dw1000_reg_file_type
+enum DW1000_REG_FILE_TYPE
 {
     DW1000_RO  = 0,
     DW1000_WO  = 1,
@@ -331,7 +341,7 @@ enum dw1000_hirq_pol_sel
 #pragma pack(1)
 
 // Register file: 0x00 – Device Identifier
-union dw1000_reg_dev_id
+union DW1000_REG_DEV_ID
 {
     struct
     {
@@ -344,7 +354,7 @@ union dw1000_reg_dev_id
 };
 
 // Register file: 0x01 – Extended Unique Identifier
-union dw1000_reg_eui
+union DW1000_REG_EUI
 {
     uint8_t value[8];
 };
@@ -352,7 +362,7 @@ union dw1000_reg_eui
 // Register file: 0x02 – Reserved
 
 // Register file: 0x03 – PAN Identifier and Short Address
-union dw1000_reg_panadr
+union DW1000_REG_PANADR
 {
     struct
     {
@@ -363,7 +373,7 @@ union dw1000_reg_panadr
 };
 
 // Register file: 0x04 – System Configuration
-union dw1000_reg_sys_cfg
+union DW1000_REG_SYS_CFG
 {
     struct
     {
@@ -403,12 +413,12 @@ union dw1000_reg_sys_cfg
     uint32_t value;
 };
 
-_Static_assert(sizeof(union dw1000_reg_sys_cfg) == 4, "union dw1000_reg_sys_cfg must be 4 bytes");
+_Static_assert(sizeof(union DW1000_REG_SYS_CFG) == 4, "union DW1000_REG_SYS_CFG must be 4 bytes");
 
 // Register file: 0x05 – Reserved
 
 // Register file: 0x06 – System Time Counter
-union dw1000_reg_sys_time
+union DW1000_REG_SYS_TIME
 {
     uint8_t sys_time[5];                // System Time Counter (40-bit)
     struct
@@ -422,7 +432,7 @@ union dw1000_reg_sys_time
 // Register file: 0x07 – Reserved
 
 // REG:08:00 – TX_FCTRL – Transmit Frame Control (Octets 0 to 3, 32-bits)
-union dw1000_reg_tx_fctrl_08_00
+union DW1000_REG_TX_FCTRL_08_00
 {
     struct
     {
@@ -441,7 +451,7 @@ union dw1000_reg_tx_fctrl_08_00
 };
 
 // REG:08:04 – TX_FCTRL – Transmit Frame Control (Octet 4, 8-bits)
-union dw1000_reg_tx_fctrl_08_04
+union DW1000_REG_TX_FCTRL_08_04
 {
     struct
     {
@@ -451,18 +461,18 @@ union dw1000_reg_tx_fctrl_08_04
 };
 
 // Register file: 0x08 – Transmit Frame Control
-union dw1000_reg_tx_fctrl
+union DW1000_REG_TX_FCTRL
 {
     struct
     {
-        union dw1000_reg_tx_fctrl_08_00 ofs_00;
-        union dw1000_reg_tx_fctrl_08_04 ofs_04;
+        union DW1000_REG_TX_FCTRL_08_00 ofs_00;
+        union DW1000_REG_TX_FCTRL_08_04 ofs_04;
     };
     uint8_t value[5];
 };
 
 // Register file: 0x0A – Delayed Send or Receive Time
-union dw1000_reg_dx_time
+union DW1000_REG_DX_TIME
 {
     struct
     {
@@ -475,7 +485,7 @@ union dw1000_reg_dx_time
 // Register file: 0x0B – Reserved
 
 // Register file: 0x0C – Receive Frame Wait Timeout Period
-union dw1000_reg_rx_fwto
+union DW1000_REG_RX_FWTO
 {
     struct
     {
@@ -494,7 +504,7 @@ union dw1000_reg_rx_fwto
 };
 
 // Register file: 0x0D – System Control Register
-union dw1000_reg_sys_ctrl
+union DW1000_REG_SYS_CTRL
 {
     struct
     {
@@ -517,7 +527,7 @@ union dw1000_reg_sys_ctrl
 };
 
 // Register file: 0x0E – System Event Mask Register
-union dw1000_reg_sys_mask
+union DW1000_REG_SYS_MASK
 {
     struct
     {
@@ -560,7 +570,7 @@ union dw1000_reg_sys_mask
 };
 
 // REG:0F:00 – SYS_STATUS – System Status Register (octets 0 to 3)
-union dw1000_reg_sys_status_0f_00
+union DW1000_REG_SYS_STATUS_0F_00
 {
     struct
     {
@@ -604,7 +614,7 @@ union dw1000_reg_sys_status_0f_00
 };
 
 // REG:0F:04 – SYS_STATUS – System Status Register (octet 4)
-union dw1000_reg_sys_status_0f_04
+union DW1000_REG_SYS_STATUS_0F_04
 {
     struct
     {
@@ -617,18 +627,18 @@ union dw1000_reg_sys_status_0f_04
 };
 
 // Register file: 0x0F – System Event Status Register
-union dw1000_reg_sys_status
+union DW1000_REG_SYS_STATUS
 {
     struct
     {
-        union dw1000_reg_sys_status_0f_00 ofs_00;
-        union dw1000_reg_sys_status_0f_04 ofs_04;
+        union DW1000_REG_SYS_STATUS_0F_00 ofs_00;
+        union DW1000_REG_SYS_STATUS_0F_04 ofs_04;
     };
     uint8_t value[5];
 };
 
 // Register file: 0x10 – RX Frame Information (in double buffer set)
-union dw1000_reg_rx_finfo
+union DW1000_REG_RX_FINFO
 {
     struct
     {
@@ -678,7 +688,7 @@ union dw1000_reg_rx_finfo
 
 // Register file: 0x11 – Receive Data (in double buffer set)
 
-union dw1000_reg_rx_fqual_12_00
+union DW1000_REG_RX_FQUAL_12_00
 {
     struct
     {
@@ -688,7 +698,7 @@ union dw1000_reg_rx_fqual_12_00
     uint32_t value;
 };
 
-union dw1000_reg_rx_fqual_12_04
+union DW1000_REG_RX_FQUAL_12_04
 {
     struct
     {
@@ -699,12 +709,12 @@ union dw1000_reg_rx_fqual_12_04
 };
 
 // Register file: 0x12 – Rx Frame Quality information (in double buffer set)
-union dw1000_reg_rx_fqual
+union DW1000_REG_RX_FQUAL
 {
     struct
     {
-        union dw1000_reg_rx_fqual_12_00 ofs_00;
-        union dw1000_reg_rx_fqual_12_04 ofs_04;
+        union DW1000_REG_RX_FQUAL_12_00 ofs_00;
+        union DW1000_REG_RX_FQUAL_12_04 ofs_04;
     };
     uint64_t value;
 };
@@ -716,7 +726,7 @@ union dw1000_reg_rx_fqual
 // Register file: 0x15 – Receive Message Time of Arrival (in double buffer set)
 
 // REG:15:00 – RX_TIME – Receive Time Stamp (Octets 0 to 3, 32-bits)
-union dw1000_reg_rx_time_15_00
+union DW1000_REG_RX_TIME_15_00
 {
     struct
     {
@@ -726,7 +736,7 @@ union dw1000_reg_rx_time_15_00
 };
 
 // REG:15:04 – RX_TIME – Receive Time Stamp (Octets 4 to 7, 32-bits)
-union dw1000_reg_rx_time_15_04
+union DW1000_REG_RX_TIME_15_04
 {
     struct
     {
@@ -738,7 +748,7 @@ union dw1000_reg_rx_time_15_04
 };
 
 // REG:15:08 – RX_TIME – Receive Time Stamp (Octets 8 to 11, 32-bits)
-union dw1000_reg_rx_time_15_08
+union DW1000_REG_RX_TIME_15_08
 {
     struct
     {
@@ -749,7 +759,7 @@ union dw1000_reg_rx_time_15_08
 };
 
 // REG:15:0C – RX_TIME – Receive Time Stamp (Octets 12 to 13, 16-bits)
-union dw1000_reg_rx_time_15_0c
+union DW1000_REG_RX_TIME_15_0C
 {
     struct
     {
@@ -758,14 +768,14 @@ union dw1000_reg_rx_time_15_0c
     uint16_t value;
 };
 
-union dw1000_reg_rx_time
+union DW1000_REG_RX_TIME
 {
     struct
     {
-        union dw1000_reg_rx_time_15_00 ofs_00;
-        union dw1000_reg_rx_time_15_04 ofs_04;
-        union dw1000_reg_rx_time_15_08 ofs_08;
-        union dw1000_reg_rx_time_15_0c ofs_0c;
+        union DW1000_REG_RX_TIME_15_00 ofs_00;
+        union DW1000_REG_RX_TIME_15_04 ofs_04;
+        union DW1000_REG_RX_TIME_15_08 ofs_08;
+        union DW1000_REG_RX_TIME_15_0C ofs_0c;
     };
     uint8_t value[14];
 };
@@ -773,7 +783,7 @@ union dw1000_reg_rx_time
 // Register file: 0x16 – Reserved
 
 // Register file: 0x17 – Transmit Time Stamp
-union dw1000_reg_tx_time_stamp
+union DW1000_REG_TX_TIME_STAMP
 {
     struct
     {
@@ -786,7 +796,7 @@ union dw1000_reg_tx_time_stamp
 };
 
 // Register file: 0x18 – Transmitter Antenna Delay
-union dw1000_reg_tx_antd
+union DW1000_REG_TX_ANTD
 {
     struct
     {
@@ -804,25 +814,25 @@ union dw1000_reg_tx_antd
 // Register file: 0x1C – Reserved
 
 // Register file: 0x1D – SNIFF Mode
-union dw1000_reg_sniff_mode
+union DW1000_REG_RX_SNIFF
 {
     struct
     {
-        uint32_t sniff_ont  : 4;        // Bit[3:0] SNIFF Mode ON time. (in units of PAC)
-        uint32_t rsvd1      : 4;        // Bit[7:4] Reserved
+        uint32_t sniff_ont  : 4;        // Bit[3:0] SNIFF Mode ON time. (in units of PAC).
+        uint32_t rsvd1      : 4;        // Bit[7:4] Reserved.
         /**
          * Bit[15:8] SNIFF Mode OFF time specified in μs. This parameter is
          * specified in units of approximately 1 μs, or 128 system clock cycles
          * (= 128 * 8 ns = 128 * (1 / DW1000_SYS_CLOCK).
          */
         uint32_t sniff_offt : 8;
-        uint32_t rsvd2      : 16;       // Bit[31:16] Reserved
+        uint32_t rsvd2      : 16;       // Bit[31:16] Reserved.
     };
     uint32_t value;
 };
 
 // Register file: 0x1E – Transmit Power Control
-union dw1000_reg_tx_power
+union DW1000_REG_TX_POWER
 {
     // Smart Transmit Power Control (When DIS_STXP = 0)
     struct
@@ -888,10 +898,10 @@ union dw1000_reg_tx_power
     uint32_t value;
 };
 
-_Static_assert(sizeof(union dw1000_reg_tx_power) == 4, "union dw1000_reg_tx_power must be 4 bytes");
+_Static_assert(sizeof(union DW1000_REG_TX_POWER) == 4, "union DW1000_REG_TX_POWER must be 4 bytes");
 
 // Register file: 0x1F – Channel Control
-union dw1000_reg_chan_ctrl
+union DW1000_REG_CHAN_CTRL
 {
     struct
     {
@@ -921,7 +931,7 @@ union dw1000_reg_chan_ctrl
 // Register file: 0x25 – Accumulator CIR memory
 
 // Sub-Register 0x26:00 – GPIO_MODE
-union dw1000_sub_reg_gpio_mode
+union DW1000_SUB_REG_GPIO_MODE
 {
     struct
     {
@@ -940,80 +950,80 @@ union dw1000_sub_reg_gpio_mode
     uint32_t value;
 };
 
-_Static_assert(sizeof(union dw1000_sub_reg_gpio_mode) == 4, "union dw1000_sub_reg_gpio_mode must be 4 bytes");
+_Static_assert(sizeof(union DW1000_SUB_REG_GPIO_MODE) == 4, "union DW1000_SUB_REG_GPIO_MODE must be 4 bytes");
 
 // Sub-Register 0x26:04 – Reserved
 
 // Sub-Register 0x26:08 – GPIO_DIR
-union dw1000_sub_reg_gpio_dir
+union DW1000_SUB_REG_GPIO_DIR
 {
     uint32_t value;
 };
 
 // Sub-Register 0x26:0C – GPIO_DOUT
-union dw1000_sub_reg_gpio_dout
+union DW1000_SUB_REG_GPIO_DOUT
 {
     uint32_t value;
 };
 
 // Sub-Register 0x26:10 – GPIO_IRQE
-union dw1000_sub_reg_gpio_irqe
+union DW1000_SUB_REG_GPIO_IRQE
 {
     uint32_t value;
 };
 
 // Sub-Register 0x26:14 – GPIO_ISEN
-union dw1000_sub_reg_gpio_isen
+union DW1000_SUB_REG_GPIO_ISEN
 {
     uint32_t value;
 };
 
 // Sub-Register 0x26:18 – GPIO_IMODE
-union dw1000_sub_reg_gpio_imode
+union DW1000_SUB_REG_GPIO_IMODE
 {
     uint32_t value;
 };
 
 // Sub-Register 0x26:1C – GPIO_IBES
-union dw1000_sub_reg_gpio_ibes
+union DW1000_SUB_REG_GPIO_IBES
 {
     uint32_t value;
 };
 
 // Sub-Register 0x26:20 – GPIO_ICLR
-union dw1000_sub_reg_gpio_iclr
+union DW1000_SUB_REG_GPIO_ICLR
 {
     uint32_t value;
 };
 
 // Sub-Register 0x26:24 – GPIO_IDBE
-union dw1000_sub_reg_gpio_idbe
+union DW1000_SUB_REG_GPIO_IDBE
 {
     uint32_t value;
 };
 
 // Sub-Register 0x26:28 – GPIO_RAW
-union dw1000_sub_reg_gpio_raw
+union DW1000_SUB_REG_GPIO_RAW
 {
     uint32_t value;
 };
 
 // Register file: 0x26 – GPIO control and status
-union dw1000_reg_gpio_ctrl
+union DW1000_REG_GPIO_CTRL
 {
     struct
     {
-        union dw1000_sub_reg_gpio_mode gpio_mode;
+        union DW1000_SUB_REG_GPIO_MODE gpio_mode;
         uint32_t rsvd;
-        union dw1000_sub_reg_gpio_dir gpio_dir;
-        union dw1000_sub_reg_gpio_dout gpio_dout;
-        union dw1000_sub_reg_gpio_irqe gpio_irqe;
-        union dw1000_sub_reg_gpio_isen gpio_isen;
-        union dw1000_sub_reg_gpio_imode gpio_imode;
-        union dw1000_sub_reg_gpio_ibes gpio_ibes;
-        union dw1000_sub_reg_gpio_iclr gpio_iclr;
-        union dw1000_sub_reg_gpio_idbe gpio_idbe;
-        union dw1000_sub_reg_gpio_raw gpio_raw;
+        union DW1000_SUB_REG_GPIO_DIR gpio_dir;
+        union DW1000_SUB_REG_GPIO_DOUT gpio_dout;
+        union DW1000_SUB_REG_GPIO_IRQE gpio_irqe;
+        union DW1000_SUB_REG_GPIO_ISEN gpio_isen;
+        union DW1000_SUB_REG_GPIO_IMODE gpio_imode;
+        union DW1000_SUB_REG_GPIO_IBES gpio_ibes;
+        union DW1000_SUB_REG_GPIO_ICLR gpio_iclr;
+        union DW1000_SUB_REG_GPIO_IDBE gpio_idbe;
+        union DW1000_SUB_REG_GPIO_RAW gpio_raw;
     };
     uint8_t value[44];
 };
@@ -1025,7 +1035,7 @@ union dw1000_reg_gpio_ctrl
  * reserved area. Please take care not to write to this register as doing so may
  * cause the DW1000 to malfunction.
  */
-union dw1000_sub_reg_drx_res1
+union DW1000_SUB_REG_DRX_RES1
 {
     /**
      * Byte[1:0] Reserved. Please take care not to write to this register as
@@ -1035,25 +1045,25 @@ union dw1000_sub_reg_drx_res1
 };
 
 // Sub-Register 0x27:02 – DRX_TUNE0b, Digital Tuning Register 0b.
-union dw1000_sub_reg_drx_tune0b
+union DW1000_SUB_REG_DRX_TUNE0B
 {
     uint16_t value;                     // Bit[15:0] Digital Tuning Register 0b.
 };
 
 // Sub-Register 0x27:04 – DRX_TUNE1a, Digital Tuning Register 1a.
-union dw1000_sub_reg_drx_tune1a
+union DW1000_SUB_REG_DRX_TUNE1A
 {
     uint16_t value;                     // Bit[15:0] Digital Tuning Register 0b.
 };
 
 // Sub-Register 0x27:06 – DRX_TUNE1b, Digital Tuning Register 1b.
-union dw1000_sub_reg_drx_tune1b
+union DW1000_SUB_REG_DRX_TUNE1B
 {
     uint16_t value;                     // Bit[15:0] Digital Tuning Register 0b.
 };
 
 // Sub-Register 0x27:08 – DRX_TUNE2, Digital Tuning Register 2.
-union dw1000_sub_reg_drx_tune2
+union DW1000_SUB_REG_DRX_TUNE2
 {
     uint32_t value;                     // Bit[31:0] RW, Digital Tuning Register 2.
 };
@@ -1065,7 +1075,7 @@ union dw1000_sub_reg_drx_tune2
  * offset 0x1F inclusive is a reserved area. Please take care not to write to
  * this area as doing so may cause the DW1000 to malfunction.
  */
-union dw1000_sub_reg_drx_res2
+union DW1000_SUB_REG_DRX_RES2
 {
     /**
      * Byte[19:0] Reserved. Please take care not to write to this register as
@@ -1075,7 +1085,7 @@ union dw1000_sub_reg_drx_res2
 };
 
 // Sub-Register 0x27:20 – DRX_SFDTOC, SFD detection timeout count
-union dw1000_sub_reg_drx_stdtoc
+union DW1000_SUB_REG_DRX_STDTOC
 {
     uint16_t value;                     // Bit[15:0] SFD detection timeout count (in units of preamble symbols).
 };
@@ -1087,7 +1097,7 @@ union dw1000_sub_reg_drx_stdtoc
  * reserved area. Please take care not to write to this register as doing so may
  * cause the DW1000 to malfunction.
  */
-union dw1000_sub_reg_drx_res3
+union DW1000_SUB_REG_DRX_RES3
 {
     /**
      * Byte[1:0] Reserved. Please take care not to write to this register as
@@ -1097,19 +1107,19 @@ union dw1000_sub_reg_drx_res3
 };
 
 // Sub-Register 0x27:24 – DRX_PRETOC, Preamble detection timeout count
-union dw1000_sub_reg_drx_pretoc
+union DW1000_SUB_REG_DRX_PRETOC
 {
     uint16_t value;                     // Bit[15:0] Preamble detection timeout count (in units of PAC size symbols).
 };
 
 // Sub-Register 0x27:26 – DRX_TUNE4H, Digital Tuning Register 4h.
-union dw1000_sub_reg_drx_tune4h
+union DW1000_SUB_REG_DRX_TUNE4H
 {
     uint16_t value;                     // Bit[15:0] Digital Tuning Register 4h.
 };
 
 // Sub-Register 0x27:28 – DRX_CAR_INT, Carrier Recovery Integrator Register.
-union dw1000_sub_reg_drx_car_int
+union DW1000_SUB_REG_DRX_CAR_INT
 {
     /**
      * Bit[20:0] RO, Carrier Recovery Integrator Register
@@ -1121,7 +1131,7 @@ union dw1000_sub_reg_drx_car_int
 };
 
 // Sub-Register 0x27:2C – RXPACC_NOSAT, Unsaturated accumulated preamble symbols.
-union dw1000_sub_reg_rxpacc_nosat
+union DW1000_SUB_REG_RXPACC_NOSAT
 {
     /**
      * Bit[15:0] RO, Digital debug register. Unsaturated accumulated preamble
@@ -1131,30 +1141,30 @@ union dw1000_sub_reg_rxpacc_nosat
 };
 
 // Register file: 0x27 – Digital receiver configuration
-union dw1000_reg_drx_conf
+union DW1000_REG_DRX_CONF
 {
     struct
     {
-        union dw1000_sub_reg_drx_res1 drx_res1;         // Byte[1:0] Reserved area 1.
-        union dw1000_sub_reg_drx_tune0b drx_tune0b;     // Byte[3:2] Digital Tuning Register 0b.
-        union dw1000_sub_reg_drx_tune1a drx_tune1a;     // Byte[5:4] Digital Tuning Register 1a.
-        union dw1000_sub_reg_drx_tune1b drx_tune1b;     // Byte[7:6] Digital Tuning Register 1b.
-        union dw1000_sub_reg_drx_tune2 drx_tune2;       // Byte[11:8] Digital Tuning Register 2.4
-        union dw1000_sub_reg_drx_res2 drx_res2;         // Byte[31:12] Reserved area 2.
-        union dw1000_sub_reg_drx_stdtoc drx_stdtoc;     // Byte[33:32] SFD detection timeout count.
-        union dw1000_sub_reg_drx_res3 drx_res3;         // Byte[35:34] Reserved area 3.
-        union dw1000_sub_reg_drx_pretoc drx_pretoc;     // Byte[37:36] Preamble detection timeout count.
-        union dw1000_sub_reg_drx_tune4h drx_tune4h;     // Byte[39:38] Digital Tuning Register.
-        union dw1000_sub_reg_drx_car_int drx_car_int;   // Byte[42:40] Carrier Recovery Integrator Register.
+        union DW1000_SUB_REG_DRX_RES1 drx_res1;         // Byte[1:0] Reserved area 1.
+        union DW1000_SUB_REG_DRX_TUNE0B drx_tune0b;     // Byte[3:2] Digital Tuning Register 0b.
+        union DW1000_SUB_REG_DRX_TUNE1A drx_tune1a;     // Byte[5:4] Digital Tuning Register 1a.
+        union DW1000_SUB_REG_DRX_TUNE1B drx_tune1b;     // Byte[7:6] Digital Tuning Register 1b.
+        union DW1000_SUB_REG_DRX_TUNE2 drx_tune2;       // Byte[11:8] Digital Tuning Register 2.4
+        union DW1000_SUB_REG_DRX_RES2 drx_res2;         // Byte[31:12] Reserved area 2.
+        union DW1000_SUB_REG_DRX_STDTOC drx_stdtoc;     // Byte[33:32] SFD detection timeout count.
+        union DW1000_SUB_REG_DRX_RES3 drx_res3;         // Byte[35:34] Reserved area 3.
+        union DW1000_SUB_REG_DRX_PRETOC drx_pretoc;     // Byte[37:36] Preamble detection timeout count.
+        union DW1000_SUB_REG_DRX_TUNE4H drx_tune4h;     // Byte[39:38] Digital Tuning Register.
+        union DW1000_SUB_REG_DRX_CAR_INT drx_car_int;   // Byte[42:40] Carrier Recovery Integrator Register.
         uint8_t rsvd;                                   // Byte[43] Reserved.
-        union dw1000_sub_reg_rxpacc_nosat rxpacc_nosat; // Byte[45:44] Unsaturated accumulated preamble symbols.
+        union DW1000_SUB_REG_RXPACC_NOSAT rxpacc_nosat; // Byte[45:44] Unsaturated accumulated preamble symbols.
     };
 };
 
-_Static_assert(sizeof(union dw1000_reg_drx_conf) == 46, "union dw1000_reg_drx_conf must be 46 bytes");
+_Static_assert(sizeof(union DW1000_REG_DRX_CONF) == 46, "union DW1000_REG_DRX_CONF must be 46 bytes");
 
 // Sub-Register 0x28:00 – RF_CONF, RF Configuration Register
-union dw1000_sub_reg_rf_conf
+union DW1000_SUB_REG_RF_CONF
 {
     struct
     {
@@ -1195,7 +1205,7 @@ union dw1000_sub_reg_rf_conf
  * reserved register. Please take care not to write to this register as doing so
  * may cause the DW1000 to malfunction.
  */
-union dw1000_sub_reg_rf_res1
+union DW1000_SUB_REG_RF_RES1
 {
     /**
      * Byte[6:0] Reserved area 1.
@@ -1207,7 +1217,7 @@ union dw1000_sub_reg_rf_res1
 };
 
 // Sub-Register 0x28:0B – RF_RXCTRLH, Analog RX Control Register
-union dw1000_sub_reg_rf_rxctrlh
+union DW1000_SUB_REG_RF_RXCTRLH
 {
     uint8_t value;                      // Bit[7:0] Analog RX Control Register
 };
@@ -1217,7 +1227,7 @@ union dw1000_sub_reg_rf_rxctrlh
  *
  * Default: 0x1e3de0, RF_TXCTRL is not set to the optimum values by default.
  */
-union dw1000_sub_reg_rf_txctrl
+union DW1000_SUB_REG_RF_TXCTRL
 {
     struct
     {
@@ -1230,7 +1240,7 @@ union dw1000_sub_reg_rf_txctrl
     uint8_t value[3];
 };
 
-_Static_assert(sizeof(union dw1000_sub_reg_rf_txctrl) == 3, "union dw1000_sub_reg_rf_txctrl must be 3 bytes");
+_Static_assert(sizeof(union DW1000_SUB_REG_RF_TXCTRL) == 3, "union DW1000_SUB_REG_RF_TXCTRL must be 3 bytes");
 
 /**
  * Sub-Register 0x28:10 – RF_RES2, Reserved area 2
@@ -1239,7 +1249,7 @@ _Static_assert(sizeof(union dw1000_sub_reg_rf_txctrl) == 3, "union dw1000_sub_re
  * reserved register. Please take care not to write to this register as doing so
  * may cause the DW1000 to malfunction.
  */
-union dw1000_sub_reg_rf_res2
+union DW1000_SUB_REG_RF_RES2
 {
     /**
      * Byte[15:0] Reserved area 2.
@@ -1251,7 +1261,7 @@ union dw1000_sub_reg_rf_res2
 };
 
 // Sub-Register 0x28:2C – RF_STATUS, RF Status Register
-union dw1000_sub_reg_rf_status
+union DW1000_SUB_REG_RF_STATUS
 {
     struct
     {
@@ -1265,7 +1275,7 @@ union dw1000_sub_reg_rf_status
 };
 
 // Sub-Register 0x28:30 – LDOTUNE
-union dw1000_sub_reg_ldotune
+union DW1000_SUB_REG_LDOTUNE
 {
     /**
      * Byte[4:0] This register is used to control the output voltage levels of
@@ -1280,28 +1290,28 @@ union dw1000_sub_reg_ldotune
 };
 
 // Register file: 0x28 – Analog RF configuration block
-union dw1000_reg_rf_conf
+union DW1000_REG_RF_CONF
 {
     struct
     {
-        union dw1000_sub_reg_rf_conf rf_conf;       // Byte[3:0] RF Configuration Register.
+        union DW1000_SUB_REG_RF_CONF rf_conf;       // Byte[3:0] RF Configuration Register.
         /**
          * Byte[10:4] Reserved area 1. Please take care not to write to this
          * register as doing so may cause the DW1000 to malfunction.
          */
-        union dw1000_sub_reg_rf_res1 rf_res1;
-        union dw1000_sub_reg_rf_rxctrlh rf_rxctrlh; // Byte[11] Analog RX Control Register.
-        union dw1000_sub_reg_rf_txctrl rf_txctrl;   // Byte[14:12] Analog TX Control Register.
+        union DW1000_SUB_REG_RF_RES1 rf_res1;
+        union DW1000_SUB_REG_RF_RXCTRLH rf_rxctrlh; // Byte[11] Analog RX Control Register.
+        union DW1000_SUB_REG_RF_TXCTRL rf_txctrl;   // Byte[14:12] Analog TX Control Register.
         uint8_t rsvd1;                              // Byte[15] Reserved1.
-        union dw1000_sub_reg_rf_res2 rf_res2;       // Byte[31:16] Reserved area 2.
+        union DW1000_SUB_REG_RF_RES2 rf_res2;       // Byte[31:16] Reserved area 2.
         uint8_t rsvd2[12];                          // Byte[43:32] Reserved2.
-        union dw1000_sub_reg_rf_status rf_status;   // Byte[47:44] RF Status Register.
-        union dw1000_sub_reg_ldotune ldotune;       // Byte[52:48] Internal LDO voltage tuning parameter.
+        union DW1000_SUB_REG_RF_STATUS rf_status;   // Byte[47:44] RF Status Register.
+        union DW1000_SUB_REG_LDOTUNE ldotune;       // Byte[52:48] Internal LDO voltage tuning parameter.
     };
     uint8_t value[53];
 };
 
-_Static_assert(sizeof(union dw1000_reg_rf_conf) == 53, "union dw1000_reg_rf_conf must be 53 bytes");
+_Static_assert(sizeof(union DW1000_REG_RF_CONF) == 53, "union DW1000_REG_RF_CONF must be 53 bytes");
 
 // Register file: 0x29 – Reserved
 
@@ -1328,7 +1338,7 @@ _Static_assert(sizeof(union dw1000_reg_rf_conf) == 53, "union dw1000_reg_rf_conf
  * is a reserved register. Please take care not to write to this area as doing
  * so may cause the DW1000 to malfunction.
  */
-union dw1000_sub_reg_fs_res1
+union DW1000_SUB_REG_FS_RES1
 {
     /**
      * Byte[6:0] Frequency synthesiser – Reserved area 1. Please take care not
@@ -1338,13 +1348,13 @@ union dw1000_sub_reg_fs_res1
 };
 
 // Sub-Register 0x2B:07 – FS_PLLCFG
-union dw1000_sub_reg_fs_pllcfg
+union DW1000_SUB_REG_FS_PLLCFG
 {
     uint8_t value[4];                   // Byte[3:0] Frequency synthesiser – PLL configuration
 };
 
 // Sub-Register 0x2B:0B – FS_PLLTUNE
-union dw1000_sub_reg_fs_plltune
+union DW1000_SUB_REG_FS_PLLTUNE
 {
     uint8_t value;                      // Bit[7:0] Frequency synthesiser – PLL Tuning
 };
@@ -1356,7 +1366,7 @@ union dw1000_sub_reg_fs_plltune
  * is a reserved area. Please take care not to write to this area as doing so
  * may cause the DW1000 to malfunction.
  */
-union dw1000_sub_reg_fs_res2
+union DW1000_SUB_REG_FS_RES2
 {
     /**
      * Byte[1:0] Frequency synthesiser – Reserved area 2. Please take care not
@@ -1366,7 +1376,7 @@ union dw1000_sub_reg_fs_res2
 };
 
 // Sub-Register 0x2B:0E – FS_XTALT
-union dw1000_sub_reg_fs_xtalt
+union DW1000_SUB_REG_FS_XTALT
 {
     struct
     {
@@ -1390,7 +1400,7 @@ union dw1000_sub_reg_fs_xtalt
  * is a reserved area. Please take care not to write to this area as doing so
  * may cause the DW1000 to malfunction.
  */
-union dw1000_sub_reg_fs_res3
+union DW1000_SUB_REG_FS_RES3
 {
     /**
      * Byte[5:0] Frequency synthesiser – Reserved area 3. Please take care not
@@ -1400,7 +1410,7 @@ union dw1000_sub_reg_fs_res3
 };
 
 // Register file: 0x2B – Frequency synthesiser control block
-union dw1000_reg_fs_ctrl
+union DW1000_REG_FS_CTRL
 {
     struct
     {
@@ -1412,19 +1422,19 @@ union dw1000_reg_fs_ctrl
          * Please take care not to write to this area as doing so may cause the
          * DW1000 to malfunction.
          */
-        union dw1000_sub_reg_fs_res1 rsvd1;
+        union DW1000_SUB_REG_FS_RES1 rsvd1;
         /**
          * Byte[10:7] Sub-Register 0x2B:07 – FS_PLLCFG
          *
          * Frequency synthesiser – PLL configuration
          */
-        union dw1000_sub_reg_fs_pllcfg fs_pllcfg;
+        union DW1000_SUB_REG_FS_PLLCFG fs_pllcfg;
         /**
          * Byte[11] Sub-Register 0x2B:0B – FS_PLLTUNE
          *
          * Frequency synthesiser – PLL Tuning
          */
-        union dw1000_sub_reg_fs_plltune fs_plltune;
+        union DW1000_SUB_REG_FS_PLLTUNE fs_plltune;
         /**
          * Byte[13:12] Sub-Register 0x2B:0C – FS_RES2
          *
@@ -1433,13 +1443,13 @@ union dw1000_reg_fs_ctrl
          * Please take care not to write to this area as doing so may cause the
          * DW1000 to malfunction.
          */
-        union dw1000_sub_reg_fs_res2 rsvd2;
+        union DW1000_SUB_REG_FS_RES2 rsvd2;
         /**
          * Byte[14] Sub-Register 0x2B:0E – FS_XTALT
          *
          * Frequency synthesiser – Crystal trim
          */
-        union dw1000_sub_reg_fs_xtalt fs_xtalt;
+        union DW1000_SUB_REG_FS_XTALT fs_xtalt;
         /**
          * Byte[20:15] Sub-Register 0x2B:0F – FS_RES3
          *
@@ -1448,55 +1458,230 @@ union dw1000_reg_fs_ctrl
          * Please take care not to write to this area as doing so may cause the
          * DW1000 to malfunction.
          */
-        union dw1000_sub_reg_fs_res3 fs_res3;
+        union DW1000_SUB_REG_FS_RES3 fs_res3;
     };
 };
 
 // Sub-Register 0x2C:00 – AON_WCFG
-
-// Sub-Register 0x2C:02 – AON_CTRL
-
-// Sub-Register 0x2C:03 – AON_RDAT
-
-// Sub-Register 0x2C:04 – AON_ADDR
-
-// Sub-Register 0x2C:05 – AON_RES1
-
-// Sub-Register 0x2C:06 – AON_CFG0
-union dw1000_sub_reg_aon_cfg0
+union DW1000_SUB_REG_AON_WCFG
 {
     struct
     {
-        uint32_t sleep_en : 1;          // Bit[0] Sleep Enable.
-        uint32_t wake_pin : 1;          // Bit[1] Wake using WAKEUP pin.
-        uint32_t wake_spi : 1;          // Bit[2] Wake using SPI access.
-        uint32_t wake_cnt : 1;          // Bit[3] Wake when sleep counter elapses.
-        uint32_t lpdiv_en : 1;          // Bit[4] Low power divider enable configuration.
+        /**
+         * Bit[0] On Wake-up Run the (temperature and voltage) Analog-to-Digital
+         * Convertors.
+         */
+        uint16_t onw_rad  : 1;
+        uint16_t onw_rx   : 1;  // Bit[1] On Wake-up turn on the Receiver.
+        uint16_t rsvd1    : 1;  // Bit[2] Reserved.
+        /**
+         * Bit[3] On Wake-up load the EUI from OTP memory into Register file:
+         * 0x01 – Extended Unique Identifier.
+         */
+        uint16_t onw_leui : 1;
+        uint16_t rsvd2    : 2;  // Bit[5:4] Reserved.
+        /**
+         * Bit[6] On Wake-upload configurations from the AON memory into the
+         * host interface register set.
+         */
+        uint16_t onw_ldc  : 1;
+        uint16_t onw_l64p : 1;  // Bit[7] On Wake-up load the Length64 receiver operating parameter set.
+        uint16_t pres_slee : 1; // Bit[8] Preserve Sleep.
+        uint16_t rsvd3    : 2;  // Bit[10:9] Reserved.
+        uint16_t onw_llde : 1;  // Bit[11] On Wake-up load the LDE microcode.
+        uint16_t onw_lld  : 1;  // Bit[12] On Wake-up load the LDOTUNE value from OTP.
+        uint16_t rsvd4    : 3;  // Bit[15:13] Reserved.
+    };
+    // uint16_t value;
+};
+
+// Sub-Register 0x2C:02 – AON_CTRL
+union DW1000_SUB_REG_AON_CTRL
+{
+    uint8_t value;
+};
+
+// Sub-Register 0x2C:03 – AON_RDAT
+union DW1000_SUB_REG_AON_RDAT
+{
+    uint8_t value;
+};
+
+// Sub-Register 0x2C:04 – AON_ADDR
+union DW1000_SUB_REG_AON_ADDR
+{
+    uint8_t value;
+};
+
+// Sub-Register 0x2C:05 – AON_RES1
+union dw1000_syb_reg_aon_res1
+{
+    uint8_t value;                      // Bit[7:0] AON Reserved area 1.
+};
+
+// Sub-Register 0x2C:06 – AON_CFG0
+union DW1000_SUB_REG_AON_CFG0
+{
+    struct
+    {
+        uint32_t sleep_en  : 1;         // Bit[0] Sleep Enable.
+        uint32_t wake_pin  : 1;         // Bit[1] Wake using WAKEUP pin.
+        uint32_t wake_spi  : 1;         // Bit[2] Wake using SPI access.
+        uint32_t wake_cnt  : 1;         // Bit[3] Wake when sleep counter elapses.
+        uint32_t lpdiv_en  : 1;         // Bit[4] Low power divider enable configuration.
         uint32_t lpclkdiva : 11;        // Bit[15:5] divider count for dividing the raw DW1000 XTAL oscillator frequency.
         uint32_t sleep_tim : 16;        // Bit[31:16] Sleep time.
     };
-    uint32_t value;
+    // uint32_t value;
 };
 
 // Sub-Register 0x2C:0A – AON_CFG1
+union DW1000_SUB_REG_AON_CFG1
+{
+    struct
+    {
+        uint16_t sleep_ce : 1;
+        uint16_t smxx     : 1;
+        uint16_t lposc_c  : 1;
+        uint16_t rsvd     : 13;
+    };
+};
 
 // Register file: 0x2C – Always-on system control interface
+union DW1000_REG_AON
+{
+    struct
+    {
+        union DW1000_SUB_REG_AON_WCFG aon_wcfg;
+        union DW1000_SUB_REG_AON_CTRL aon_ctrl;
+        union DW1000_SUB_REG_AON_RDAT aon_rdat;
+        union DW1000_SUB_REG_AON_ADDR aon_addr;
+        union dw1000_syb_reg_aon_res1 aon_res1;
+        union DW1000_SUB_REG_AON_CFG0 aon_cfg0;
+        union DW1000_SUB_REG_AON_CFG1 aon_cfg1;
+    };
+};
+
+_Static_assert(sizeof(union DW1000_REG_AON) == 12, "union DW1000_REG_AON must be 12 bytes");
 
 // Sub-Register 0x2D:00 – OTP_WDAT
+union DW1000_SUB_REG_OTP_WDAT
+{
+    /**
+     * Bit[31:0] Register file: 0x2D – OTP Memory Interface, sub-register 0x00
+     * is a 32-bit register. The data value to be programmed into an OTP
+     * location should be written here before invoking the programming function.
+     */
+    uint32_t value;
+};
 
 // Sub-Register 0x2D:04 – OTP_ADDR
+union DW1000_SUB_REG_OTP_ADDR
+{
+    struct
+    {
+        /**
+         * Bit[10:0] This 11-bit field specifies the address within OTP memory
+         * that will be accessed read or written.
+         */
+        uint16_t otpaddr : 11;
+        uint16_t rsvd    : 5;           // Bit[15:11] Reserved.
+    };
+    // uint16_t value;
+};
 
 // Sub-Register 0x2D:06 – OTP_CTRL
+union DW1000_SUB_REG_OTP_CTRL
+{
+    struct
+    {
+        uint16_t  otprden : 1;          // Bit[0] This bit forces the OTP into manual read mode.
+        /**
+         * Bit[1] This bit commands a read operation from the address specified
+         * in the OTP_ADDR register the value read will then be available in
+         * the OTP_RDAT register.
+         */
+        uint16_t  otpread : 1;
+        uint16_t  rsvd1   : 1;          // Bit[2] Reserved.
+        uint16_t  otpmrwr : 1;          // Bit[3] OTP mode register write.
+        uint16_t  rsvd2   : 2;          // Bit[5:4] Reserved.
+        /**
+         * Bit[6] Setting this bit will cause the contents of OTP_WDAT to be
+         * written to OTP_ADDR.
+         */
+        uint16_t  otpprog : 1;
+        uint16_t  otpmr   : 4;          // Bit[10:7] OTP Mode register.
+        uint16_t  rsvd3   : 4;          // Bit[14:11] Reserved.
+        uint16_t  ldeload : 1;          // Bit[15] This bit forces a load of LDE microcode.
+    };
+    // uint16_t value;
+};
 
 // Sub-Register 0x2D:08 – OTP_STAT
+union DW1000_SUB_REG_OTP_STAT
+{
+    struct
+    {
+        uint16_t otpprgd : 1;           // Bit[0] OTP Programming Done.
+        uint16_t otpvpok : 1;           // Bit[1] OTP Programming Voltage OK.
+        uint16_t rsvd    : 14;          // Bit[15:2] Reserved.
+    };
+    // uint16_t value;
+};
 
 // Sub-Register 0x2D:0A – OTP_RDAT
+union DW1000_SUB_REG_OTP_RDAT
+{
+    uint32_t value;                     // Bit[31:0] R, OTP Read Data
+};
 
 // Sub-Register 0x2D:0E – OTP_SRDAT
+union DW1000_SUB_REG_OTP_SRDAT
+{
+    uint32_t value;                     // Bit[31:0] OTP Special Register Read Data
+};
 
 // Sub-Register 0x2D:12 – OTP_SF
+union DW1000_SUB_REG_OTP_SF
+{
+    struct
+    {
+        /**
+         * Bit[0] This bit when set initiates a load of the operating parameter
+         * set selected by the OPS_SEL configuration below. (This control is in
+         * the OTP block because the parameter sets are in OTP memory during
+         * their development, only moving to ROM for the production IC).
+         */
+        uint8_t ops_kick : 1;
+        /**
+         * Bit[1] This bit when set initiates the loading of the LDOTUNE_CAL
+         * parameter from OTP address 0x4 into the register Sub-Register 0x28:30
+         * – LDOTUNE. See the section Waking from sleep for more details.
+         */
+        uint8_t ldo_kick : 1;
+        uint8_t rsvd1    : 3;           // Bit[4:2] Reserved.
+        uint8_t ops_sel  : 2;           // Bit[6:5] Operating parameter set selection.
+        uint8_t rsvd2    : 1;           // Bit[7] Reserved.
+    };
+    // uint8_t value;
+};
 
 // Register file: 0x2D – OTP Memory Interface
+union DW1000_REG_OTP_IF
+{
+    struct
+    {
+        union DW1000_SUB_REG_OTP_WDAT otp_wdat;
+        union DW1000_SUB_REG_OTP_ADDR otp_addr;
+        union DW1000_SUB_REG_OTP_CTRL otp_ctrl;
+        union DW1000_SUB_REG_OTP_STAT otp_stat;
+        union DW1000_SUB_REG_OTP_RDAT otp_rdat;
+        union DW1000_SUB_REG_OTP_SRDAT otp_srdat;
+        union DW1000_SUB_REG_OTP_SF otp_sf;
+    };
+};
+
+_Static_assert(sizeof(union DW1000_REG_OTP_IF) == 19, "union DW1000_REG_OTP_IF must be 19 bytes");
 
 // Sub-Register 0x2E:0000 – LDE_THRESH
 
@@ -1513,9 +1698,18 @@ union dw1000_sub_reg_aon_cfg0
 // Sub-Register 0x2E:2804 – LDE_REPC
 
 // Register file: 0x2E – Leading Edge Detection Interface
+union DW1000_REG_LDE_IF
+{
+    struct
+    {
+
+    };
+};
+
+_Static_assert(sizeof(union DW1000_REG_LDE_IF) == 0, "union DW1000_REG_LDE_IF must be 0 bytes");
 
 // Sub-Register 0x2F:00 – Event Counter Control
-union dw1000_sub_reg_evc_ctrl
+union DW1000_SUB_REG_EVC_CTRL
 {
     struct
     {
@@ -1527,7 +1721,7 @@ union dw1000_sub_reg_evc_ctrl
 };
 
 // Sub-Register 0x2F:04 – PHR Error Counter
-union dw1000_sub_reg_evc_phe
+union DW1000_SUB_REG_EVC_PHE
 {
     struct
     {
@@ -1538,7 +1732,7 @@ union dw1000_sub_reg_evc_phe
 };
 
 // Sub-Register 0x2F:06 – RSD Error Counter
-union dw1000_sub_reg_evc_rse
+union DW1000_SUB_REG_EVC_RSE
 {
     struct
     {
@@ -1549,7 +1743,7 @@ union dw1000_sub_reg_evc_rse
 };
 
 // Sub-Register 0x2F:08 – FCS Good Counter
-union dw1000_sub_reg_evc_fcg
+union DW1000_SUB_REG_EVC_FCG
 {
     struct
     {
@@ -1560,7 +1754,7 @@ union dw1000_sub_reg_evc_fcg
 };
 
 // Sub-Register 0x2F:0A – FCS Error Counter
-union dw1000_sub_reg_evc_fce
+union DW1000_SUB_REG_EVC_FCE
 {
     struct
     {
@@ -1571,7 +1765,7 @@ union dw1000_sub_reg_evc_fce
 };
 
 // Sub-Register 0x2F:0C – Frame Filter Rejection Counter
-union dw1000_sub_reg_evc_ffr
+union DW1000_SUB_REG_EVC_FFR
 {
     struct
     {
@@ -1582,7 +1776,7 @@ union dw1000_sub_reg_evc_ffr
 };
 
 // Sub-Register 0x2F:0E – RX Overrun Error Counter
-union dw1000_sub_reg_evc_ovr
+union DW1000_SUB_REG_EVC_OVR
 {
     struct
     {
@@ -1593,7 +1787,7 @@ union dw1000_sub_reg_evc_ovr
 };
 
 // Sub-Register 0x2F:10 – SFD Timeout Error Counter
-union dw1000_sub_reg_evc_sto
+union DW1000_SUB_REG_EVC_STO
 {
     struct
     {
@@ -1604,7 +1798,7 @@ union dw1000_sub_reg_evc_sto
 };
 
 // Sub-Register 0x2F:12 – Preamble Detection Timeout Event Counter
-union dw1000_sub_reg_evc_pto
+union DW1000_SUB_REG_EVC_PTO
 {
     struct
     {
@@ -1615,7 +1809,7 @@ union dw1000_sub_reg_evc_pto
 };
 
 // Sub-Register 0x2F:14 – RX Frame Wait Timeout Event Counter
-union dw1000_sub_reg_evc_fwto
+union DW1000_SUB_REG_EVC_FWTO
 {
     struct
     {
@@ -1626,7 +1820,7 @@ union dw1000_sub_reg_evc_fwto
 };
 
 // Sub-Register 0x2F:16 – TX Frame Sent Counter
-union dw1000_sub_reg_evc_txfs
+union DW1000_SUB_REG_EVC_TXFS
 {
     struct
     {
@@ -1637,7 +1831,7 @@ union dw1000_sub_reg_evc_txfs
 };
 
 // Sub-Register 0x2F:18 – Half Period Warning Counter
-union dw1000_sub_reg_evc_hpw
+union DW1000_SUB_REG_EVC_HPW
 {
     struct
     {
@@ -1647,7 +1841,7 @@ union dw1000_sub_reg_evc_hpw
 };
 
 // Sub-Register 0x2F:1A – Transmitter Power-Up Warning Counter
-union dw1000_sub_reg_evc_tpw
+union DW1000_SUB_REG_EVC_TPW
 {
     struct
     {
@@ -1658,7 +1852,7 @@ union dw1000_sub_reg_evc_tpw
 };
 
 // Sub-Register 0x2F:1C – Digital Diagnostics Reserved Area 1
-union dw1000_sub_reg_evc_res1
+union DW1000_SUB_REG_EVC_RES1
 {
     struct
     {
@@ -1668,7 +1862,7 @@ union dw1000_sub_reg_evc_res1
 };
 
 // Sub-Register 0x2F:24 – Test Mode Control Register
-union dw1000_sub_reg_diag_tmc
+union DW1000_SUB_REG_DIAG_TMC
 {
     struct
     {
@@ -1680,25 +1874,25 @@ union dw1000_sub_reg_diag_tmc
 };
 
 // Register file: 0x2F – Digital Diagnostics Interface
-union dw1000_reg_dig_diag
+union DW1000_REG_DIG_DIAG
 {
     struct
     {
-        union dw1000_sub_reg_evc_ctrl evc_ctrl; // Sub-Register 0x2F:00 – Event Counter Control
-        union dw1000_sub_reg_evc_phe evc_phe;   // Sub-Register 0x2F:04 – PHR Error Counter
-        union dw1000_sub_reg_evc_rse evc_rse;   // Sub-Register 0x2F:06 – RSD Error Counter
-        union dw1000_sub_reg_evc_fcg evc_fcg;   // Sub-Register 0x2F:08 – FCS Good Counter
-        union dw1000_sub_reg_evc_fce evc_fce;   // Sub-Register 0x2F:0A – FCS Error Counter
-        union dw1000_sub_reg_evc_ffr evc_ffr;   // Sub-Register 0x2F:0C – Frame Filter Rejection Counter
-        union dw1000_sub_reg_evc_ovr evc_ovr;   // Sub-Register 0x2F:0E – RX Overrun Error Counter
-        union dw1000_sub_reg_evc_sto evc_sto;   // Sub-Register 0x2F:10 – SFD Timeout Error Counter
-        union dw1000_sub_reg_evc_pto evc_pto;   // Sub-Register 0x2F:12 – Preamble Detection Timeout Event Counter
-        union dw1000_sub_reg_evc_fwto evc_fwto; // Sub-Register 0x2F:14 – RX Frame Wait Timeout Event Counter
-        union dw1000_sub_reg_evc_txfs evc_txfs; // Sub-Register 0x2F:16 – TX Frame Sent Counter
-        union dw1000_sub_reg_evc_hpw evc_hpw;   // Sub-Register 0x2F:18 – Half Period Warning Counter
-        union dw1000_sub_reg_evc_tpw evc_tpw;   // Sub-Register 0x2F:1A – Transmitter Power-Up Warning Counter
-        union dw1000_sub_reg_evc_res1 evc_res1; // Sub-Register 0x2F:1C – EVC_RES1
-        union dw1000_sub_reg_diag_tmc diag_tmc; // Sub-Register 0x2F:24 – Digital Diagnostics Test Mode Control
+        union DW1000_SUB_REG_EVC_CTRL evc_ctrl; // Sub-Register 0x2F:00 – Event Counter Control
+        union DW1000_SUB_REG_EVC_PHE evc_phe;   // Sub-Register 0x2F:04 – PHR Error Counter
+        union DW1000_SUB_REG_EVC_RSE evc_rse;   // Sub-Register 0x2F:06 – RSD Error Counter
+        union DW1000_SUB_REG_EVC_FCG evc_fcg;   // Sub-Register 0x2F:08 – FCS Good Counter
+        union DW1000_SUB_REG_EVC_FCE evc_fce;   // Sub-Register 0x2F:0A – FCS Error Counter
+        union DW1000_SUB_REG_EVC_FFR evc_ffr;   // Sub-Register 0x2F:0C – Frame Filter Rejection Counter
+        union DW1000_SUB_REG_EVC_OVR evc_ovr;   // Sub-Register 0x2F:0E – RX Overrun Error Counter
+        union DW1000_SUB_REG_EVC_STO evc_sto;   // Sub-Register 0x2F:10 – SFD Timeout Error Counter
+        union DW1000_SUB_REG_EVC_PTO evc_pto;   // Sub-Register 0x2F:12 – Preamble Detection Timeout Event Counter
+        union DW1000_SUB_REG_EVC_FWTO evc_fwto; // Sub-Register 0x2F:14 – RX Frame Wait Timeout Event Counter
+        union DW1000_SUB_REG_EVC_TXFS evc_txfs; // Sub-Register 0x2F:16 – TX Frame Sent Counter
+        union DW1000_SUB_REG_EVC_HPW evc_hpw;   // Sub-Register 0x2F:18 – Half Period Warning Counter
+        union DW1000_SUB_REG_EVC_TPW evc_tpw;   // Sub-Register 0x2F:1A – Transmitter Power-Up Warning Counter
+        union DW1000_SUB_REG_EVC_RES1 evc_res1; // Sub-Register 0x2F:1C – EVC_RES1
+        union DW1000_SUB_REG_DIAG_TMC diag_tmc; // Sub-Register 0x2F:24 – Digital Diagnostics Test Mode Control
         uint8_t rsvd[3];
     };
     uint8_t value[41];
@@ -1706,25 +1900,80 @@ union dw1000_reg_dig_diag
 
 // Register files: 0x30 to 0x35 – Reserved
 
-// Sub-Register 0x36:00 – PMSC_CTRL0
+// Sub-Register 0x36:00 – PMSC_CTRL0, PMSC Control Register 0
+union DW1000_SUB_REG_PMSC_CTRL0
+{
+    uint32_t value;
+};
 
-// Sub-Register 0x36:04 – PMSC_CTRL1
+// Sub-Register 0x36:04 – PMSC_CTRL1, PMSC Control Register 1
+union DW1000_SUB_REG_PMSC_CTRL1
+{
+    struct
+    {
+        uint32_t rsvd1     : 1;         // Bit[0] Reserved.
+        uint32_t arx2int   : 1;         // Bit[1] Automatic transition from receive mode into the INIT state.
+        uint32_t rsvd2     : 1;         // Bit[2] Reserved.
+        uint32_t pktseq    : 8;         // Bit[10:3] Writing 0 to PKTSEQ disables PMSC control of analog RF subsystems.
+        uint32_t atxslp    : 1;         // Bit[11] After TX automatically Sleep.
+        uint32_t arxslp    : 1;         // Bit[12] After RX automatically Sleep.
+        uint32_t snoze     : 1;         // Bit[13] Snooze Enable.
+        uint32_t snozr     : 1;         // Bit[14] Snooze Repeat.
+        uint32_t pllsyn    : 1;         // Bit[15] This enables a special 1 GHz clock used for some external SYNC modes.
+        uint32_t rsvd3     : 1;         // Bit[16] Reserved.
+        uint32_t lderune   : 1;         // Bit[17] LDE run enable.
+        uint32_t rsvd4     : 8;         // Bit[25:18] Reserved.
+        uint32_t khzclkdiv : 6;         // Bit[31:26] Kilohertz clock divisor.
+    };
+    // uint32_t value;
+};
 
-// Sub-Register 0x36:08 – PMSC_RES1
+// Sub-Register 0x36:08 – PMSC_RES1, PMSC reserved area 1
+union DW1000_SUB_REG_PMSC_RES1
+{
+    uint32_t value;
+};
 
-// Sub-Register 0x36:0C – PMSC_SNOZT
+// Sub-Register 0x36:0C – PMSC_SNOZT, PMSC Snooze Time Register
+union DW1000_SUB_REG_PMSC_SNOZT
+{
+    uint32_t value;
+};
 
-// Sub-Register 0x36:10 – PMSC_RES2
+// Sub-Register 0x36:10 – PMSC_RES2, PMSC reserved area 2
+union DW1000_SUB_REG_PMSC_RES2
+{
+    uint8_t value[22];
+};
 
-// Sub-Register 0x36:26 – PMSC_TXFSEQ
+// Sub-Register 0x36:26 – PMSC_TXFSEQ, PMSC fine grain TX sequencing control
+union DW1000_SUB_REG_PMSC_TXFSEQ
+{
+    uint16_t value;
+};
 
-// Sub-Register 0x36:28 – PMSC_LEDC
+// Sub-Register 0x36:28 – PMSC_LEDC, PMSC LED Control Register
+union DW1000_SUB_REG_PMSC_LEDC
+{
+    uint32_t value;
+};
 
 // Register file: 0x36 – Power Management and System Control
-union dw1000_reg_pmsc
+union DW1000_REG_PMSC
 {
-
+    struct
+    {
+        union DW1000_SUB_REG_PMSC_CTRL0 pmsc_ctrl0;
+        union DW1000_SUB_REG_PMSC_CTRL1 pmsc_ctrl1;
+        union DW1000_SUB_REG_PMSC_RES1 pmsc_res1;
+        union DW1000_SUB_REG_PMSC_SNOZT pmsc_snozt;
+        union DW1000_SUB_REG_PMSC_RES2 pmsc_res2;
+        union DW1000_SUB_REG_PMSC_TXFSEQ pmsc_txfseq;
+        union DW1000_SUB_REG_PMSC_LEDC pmsc_ledc;
+    };
 };
+
+_Static_assert(sizeof(union DW1000_REG_PMSC) == 44, "union DW1000_REG_PMSC must be 44 bytes");
 
 // Register files: 0x37 to 0x3F – Reserved
 
@@ -1810,34 +2059,36 @@ struct dw1000_context
     /**
      * System Configuration
      */
-    union dw1000_reg_sys_cfg sys_cfg;
-    union dw1000_reg_rx_fwto rx_fwto;
-    union dw1000_sub_reg_gpio_mode gpio_mode;
-    union dw1000_reg_sniff_mode sniff_mode;
+    union DW1000_REG_SYS_CFG sys_cfg;
+    union DW1000_REG_RX_FWTO rx_fwto;
+    union DW1000_REG_RX_SNIFF rx_sniff;
+    union DW1000_SUB_REG_GPIO_MODE gpio_mode;
+    union DW1000_REG_AON aon;
+    union DW1000_REG_OTP_IF otp_if;
+    union DW1000_REG_PMSC pmsc;
+    union DW1000_REG_SYS_STATUS sys_status;
+    union DW1000_REG_SYS_MASK sys_mask;
     /**
      * Channel Configuration
      */
-    union dw1000_reg_chan_ctrl chan_ctrl;
-    union dw1000_reg_fs_ctrl fs_ctrl;
+    union DW1000_REG_CHAN_CTRL chan_ctrl;
+    union DW1000_REG_FS_CTRL fs_ctrl;
     /**
      * Transmitter Configuration
      */
-    union dw1000_reg_tx_fctrl tx_fctrl;
-    union dw1000_reg_tx_power tx_power;
+    union DW1000_REG_TX_FCTRL tx_fctrl;
+    union DW1000_REG_TX_POWER tx_power;
     /**
      * Receiver Configuration
      */
-    union dw1000_reg_drx_conf drx_conf;
-    union dw1000_reg_rf_conf rf_conf;
-    /**
-     * MICS.
-     */
-    union dw1000_reg_sys_status sys_status;
-    union dw1000_reg_sys_mask sys_mask;
+    union DW1000_REG_DRX_CONF drx_conf;
+    union DW1000_REG_RF_CONF rf_conf;
     //
     struct dw1000_trx_para trx_cfg;
     bool is_standard_sfd;
     bool is_txprf_16mhz;
+    bool lde_run_enable;
+    bool sleep_enable;
 };
 
 void dw1000_ctx_init(struct dw1000_context *dw1000_ctx);

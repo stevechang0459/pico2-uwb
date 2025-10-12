@@ -14,6 +14,9 @@
 #include <math.h>
 #include <float.h>
 
+#define DW1000_SUB_REG_DESC(m, t, s) \
+    {.reg_file_id = DW1000_##m, .length = sizeof(union DW1000_SUB_REG_##m), .reg_file_type = DW1000_##t, .mnemonic = #m, .desc = s}
+
 static struct dw1000_reg dw1000_regs[] =
 {
     {.reg_file_id = DW1000_DEV_ID,      .length = 4,    .reg_file_type = DW1000_RO,  .mnemonic = "DEV_ID",     .desc = "Device Identifier"},
@@ -56,12 +59,12 @@ static struct dw1000_reg dw1000_regs[] =
     {.reg_file_id = DW1000_ACC_MEM,     .length = 4064, .reg_file_type = DW1000_RO,  .mnemonic = "ACC_MEM",    .desc = "Read access to accumulator data"},
     {.reg_file_id = DW1000_GPIO_CTRL,   .length = 44,   .reg_file_type = DW1000_RW,  .mnemonic = "GPIO_CTRL",  .desc = "Peripheral register bus 1 access"},
     {.reg_file_id = DW1000_DRX_CONF,    .length = 46,   .reg_file_type = DW1000_RW,  .mnemonic = "DRX_CONF",   .desc = "Digital Receiver configuration"},
-    {.reg_file_id = DW1000_RF_CONF,     .length = 53,   .reg_file_type = DW1000_RW,  .mnemonic = "RF_CONF",    .desc = "Analog RF Configuration"},
+    {.reg_file_id = DW1000_RF_CONF,     .length = 53/*58*/,   .reg_file_type = DW1000_RW,  .mnemonic = "RF_CONF",    .desc = "Analog RF Configuration"},
     {.reg_file_id = 0x29, .length = 0, .mnemonic = "Reserved", .desc = "Reserved"},
     {.reg_file_id = DW1000_TX_CAL,      .length = 52,   .reg_file_type = DW1000_RW,  .mnemonic = "TX_CAL",     .desc = "Transmitter calibration block"},
     {.reg_file_id = DW1000_FS_CTRL,     .length = 21,   .reg_file_type = DW1000_RW,  .mnemonic = "FS_CTRL",    .desc = "Frequency synthesiser control block"},
     {.reg_file_id = DW1000_AON,         .length = 12,   .reg_file_type = DW1000_RW,  .mnemonic = "AON",        .desc = "Always-On register set"},
-    {.reg_file_id = DW1000_OTP_IF,      .length = 18,   .reg_file_type = DW1000_RW,  .mnemonic = "OTP_IF",     .desc = "One Time Programmable Memory Interface"},
+    {.reg_file_id = DW1000_OTP_IF,      .length = 19/*18*/,   .reg_file_type = DW1000_RW,  .mnemonic = "OTP_IF",     .desc = "One Time Programmable Memory Interface"},
     {.reg_file_id = DW1000_LDE_CTRL,    .length = 0,    .reg_file_type = DW1000_RW,  .mnemonic = "LDE_CTRL",   .desc = "Leading edge detection control block"},
     {.reg_file_id = DW1000_DIG_DIAG,    .length = 41,   .reg_file_type = DW1000_RW,  .mnemonic = "DIG_DIAG",   .desc = "Digital Diagnostics Interface"},
     {.reg_file_id = 0x30, .length = 0, .mnemonic = "Reserved", .desc = "Reserved"},
@@ -80,37 +83,6 @@ static struct dw1000_reg dw1000_regs[] =
     {.reg_file_id = 0x3d, .length = 0, .mnemonic = "Reserved", .desc = "Reserved"},
     {.reg_file_id = 0x3e, .length = 0, .mnemonic = "Reserved", .desc = "Reserved"},
     {.reg_file_id = 0x3f, .length = 0, .mnemonic = "Reserved", .desc = "Reserved"},
-    NULL
-};
-
-static struct dw1000_reg dw1000_dig_diag_sub_regs[] =
-{
-    {.reg_file_id = DW1000_EVC_CTRL,    .length = 4,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_CTRL",   .desc = "Event Counter Control"},
-    {.reg_file_id = DW1000_EVC_PHE,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_PHE",    .desc = "PHR Error Counter"},
-    {.reg_file_id = DW1000_EVC_RSE,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_RSE",    .desc = "RSD Error Counter"},
-    {.reg_file_id = DW1000_EVC_FCG,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_FCG",    .desc = "Frame Check Sequence Good Counter"},
-    {.reg_file_id = DW1000_EVC_FCE,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_FCE",    .desc = "Frame Check Sequence Error Counter"},
-    {.reg_file_id = DW1000_EVC_FFR,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_FFR",    .desc = "Frame Filter Rejection Counter"},
-    {.reg_file_id = DW1000_EVC_OVR,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_OVR",    .desc = "RX Overrun Error Counter"},
-    {.reg_file_id = DW1000_EVC_STO,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_STO",    .desc = "SFD Timeout Counter"},
-    {.reg_file_id = DW1000_EVC_PTO,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_PTO",    .desc = "Preamble Timeout Counter"},
-    {.reg_file_id = DW1000_EVC_FWTO,    .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_FWTO",   .desc = "RX Frame Wait Timeout Counter"},
-    {.reg_file_id = DW1000_EVC_TXFS,    .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_TXFS",   .desc = "TX Frame Sent Counter"},
-    {.reg_file_id = DW1000_EVC_HPW,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_HPW",    .desc = "Half Period Warning Counter"},
-    {.reg_file_id = DW1000_EVC_TPW,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_TPW",    .desc = "Transmitter Power-Up Warning Counter"},
-    {.reg_file_id = DW1000_EVC_RES1,    .length = 8,    .reg_file_type = DW1000_RW,  .mnemonic = "EVC_RES1",   .desc = "Digital Diagnostics Reserved Area 1"},
-    {.reg_file_id = DW1000_EVC_TMC,     .length = 2,    .reg_file_type = DW1000_RW,  .mnemonic = "DIAG_TMC",   .desc = "Test Mode Control Register"},
-    NULL
-};
-
-static struct dw1000_reg dw1000_aon_sub_regs[] =
-{
-    {.reg_file_id = DW1000_AON_WCFG,    .length = 2,    .reg_file_type = DW1000_RW,  .mnemonic = "AON_WCFG",   .desc = "AON Wakeup Configuration Register"},
-    {.reg_file_id = DW1000_AON_CTRL,    .length = 1,    .reg_file_type = DW1000_RW,  .mnemonic = "AON_CTRL",   .desc = "AON Control Register"},
-    {.reg_file_id = DW1000_AON_RDAT,    .length = 1,    .reg_file_type = DW1000_RW,  .mnemonic = "AON_RDAT",   .desc = "AON Direct Access Read Data Result"},
-    {.reg_file_id = DW1000_AON_ADDR,    .length = 1,    .reg_file_type = DW1000_RW,  .mnemonic = "AON_ADDR",   .desc = "AON Direct Access Address"},
-    {.reg_file_id = DW1000_AON_CFG0,    .length = 4,    .reg_file_type = DW1000_RW,  .mnemonic = "AON_CFG0",   .desc = "AON Configuration Register 0"},
-    {.reg_file_id = DW1000_AON_CFG1,    .length = 2,    .reg_file_type = DW1000_RW,  .mnemonic = "AON_CFG1",   .desc = "AON Configuration Register 1"},
     NULL
 };
 
@@ -151,6 +123,65 @@ static struct dw1000_reg dw1000_drx_conf_sub_regs[] =
     {.reg_file_id = DW1000_DRX_TUNE4H,  .length = 2,    .reg_file_type = DW1000_RW,  .mnemonic = "DRX_TUNE4H",  .desc = "Digital Tuning Register 4H"},
     {.reg_file_id = DW1000_DRX_CAR_INT, .length = 3,    .reg_file_type = DW1000_RO,  .mnemonic = "DRX_CAR_INT", .desc = "Carrier Recovery Integrator Register"},
     {.reg_file_id = DW1000_RXPACC_NOSAT,.length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "RXPACC_NOSAT",.desc = "Unsaturated accumulated preamble symbols"},
+    NULL
+};
+
+// Register file: 0x2C – Always-on system control overview
+static struct dw1000_reg dw1000_aon_sub_regs[] =
+{
+    {.reg_file_id = DW1000_AON_WCFG,    .length = 2,    .reg_file_type = DW1000_RW,  .mnemonic = "AON_WCFG",   .desc = "AON Wakeup Configuration Register"},
+    {.reg_file_id = DW1000_AON_CTRL,    .length = 1,    .reg_file_type = DW1000_RW,  .mnemonic = "AON_CTRL",   .desc = "AON Control Register"},
+    {.reg_file_id = DW1000_AON_RDAT,    .length = 1,    .reg_file_type = DW1000_RW,  .mnemonic = "AON_RDAT",   .desc = "AON Direct Access Read Data Result"},
+    {.reg_file_id = DW1000_AON_ADDR,    .length = 1,    .reg_file_type = DW1000_RW,  .mnemonic = "AON_ADDR",   .desc = "AON Direct Access Address"},
+    {.reg_file_id = DW1000_AON_CFG0,    .length = 4,    .reg_file_type = DW1000_RW,  .mnemonic = "AON_CFG0",   .desc = "AON Configuration Register 0"},
+    {.reg_file_id = DW1000_AON_CFG1,    .length = 2,    .reg_file_type = DW1000_RW,  .mnemonic = "AON_CFG1",   .desc = "AON Configuration Register 1"},
+    NULL
+};
+
+// Register file: 0x2D – OTP Memory Interface overview
+static struct dw1000_reg dw1000_otp_if_sub_regs[] =
+{
+    DW1000_SUB_REG_DESC(OTP_WDAT,  RW, "OTP Write Data"),
+    DW1000_SUB_REG_DESC(OTP_ADDR,  RW, "OTP Address"),
+    DW1000_SUB_REG_DESC(OTP_CTRL,  RW, "OTP Control"),
+    DW1000_SUB_REG_DESC(OTP_STAT,  RW, "OTP Status"),
+    DW1000_SUB_REG_DESC(OTP_RDAT,  RO, "OTP Read Data"),
+    DW1000_SUB_REG_DESC(OTP_SRDAT, RW, "OTP SR Read Data"),
+    DW1000_SUB_REG_DESC(OTP_SF,    RW, "OTP Special Function"),
+    NULL
+};
+
+// Register file: 0x2F – Digital Diagnostics Interface overview
+static struct dw1000_reg dw1000_dig_diag_sub_regs[] =
+{
+    {.reg_file_id = DW1000_EVC_CTRL,    .length = 4,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_CTRL",   .desc = "Event Counter Control"},
+    {.reg_file_id = DW1000_EVC_PHE,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_PHE",    .desc = "PHR Error Counter"},
+    {.reg_file_id = DW1000_EVC_RSE,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_RSE",    .desc = "RSD Error Counter"},
+    {.reg_file_id = DW1000_EVC_FCG,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_FCG",    .desc = "Frame Check Sequence Good Counter"},
+    {.reg_file_id = DW1000_EVC_FCE,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_FCE",    .desc = "Frame Check Sequence Error Counter"},
+    {.reg_file_id = DW1000_EVC_FFR,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_FFR",    .desc = "Frame Filter Rejection Counter"},
+    {.reg_file_id = DW1000_EVC_OVR,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_OVR",    .desc = "RX Overrun Error Counter"},
+    {.reg_file_id = DW1000_EVC_STO,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_STO",    .desc = "SFD Timeout Counter"},
+    {.reg_file_id = DW1000_EVC_PTO,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_PTO",    .desc = "Preamble Timeout Counter"},
+    {.reg_file_id = DW1000_EVC_FWTO,    .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_FWTO",   .desc = "RX Frame Wait Timeout Counter"},
+    {.reg_file_id = DW1000_EVC_TXFS,    .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_TXFS",   .desc = "TX Frame Sent Counter"},
+    {.reg_file_id = DW1000_EVC_HPW,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_HPW",    .desc = "Half Period Warning Counter"},
+    {.reg_file_id = DW1000_EVC_TPW,     .length = 2,    .reg_file_type = DW1000_RO,  .mnemonic = "EVC_TPW",    .desc = "Transmitter Power-Up Warning Counter"},
+    {.reg_file_id = DW1000_EVC_RES1,    .length = 8,    .reg_file_type = DW1000_RW,  .mnemonic = "EVC_RES1",   .desc = "Digital Diagnostics Reserved Area 1"},
+    {.reg_file_id = DW1000_EVC_TMC,     .length = 2,    .reg_file_type = DW1000_RW,  .mnemonic = "DIAG_TMC",   .desc = "Test Mode Control Register"},
+    NULL
+};
+
+// Register file: 0x36 – Power Management and System Control overview
+static struct dw1000_reg dw1000_pmsc_sub_regs[] =
+{
+    DW1000_SUB_REG_DESC(PMSC_CTRL0,  RW, "PMSC Control Register 0"),
+    DW1000_SUB_REG_DESC(PMSC_CTRL1,  RW, "PMSC Control Register 1"),
+    DW1000_SUB_REG_DESC(PMSC_RES1,   RW, "PMSC reserved area 1"),
+    DW1000_SUB_REG_DESC(PMSC_SNOZT,  RW, "PMSC Snooze Time Register"),
+    DW1000_SUB_REG_DESC(PMSC_RES2,   RW, "PMSC reserved area 2"),
+    DW1000_SUB_REG_DESC(PMSC_TXFSEQ, RW, "PMSC fine grain TX sequencing control"),
+    DW1000_SUB_REG_DESC(PMSC_LEDC,   RW, "PMSC LED Control Register"),
     NULL
 };
 
@@ -432,6 +463,8 @@ void dw1000_ctx_init(struct dw1000_context *dw1000_ctx)
     dw1000_ctx->spi_cfg.pin.rx     = SPI0_RX_PIN;
     dw1000_ctx->spi_cfg.pin.csn    = SPI0_CSN_PIN;
     dw1000_ctx->spi_cfg.slave_mode = false;
+
+    dw1000_ctx->lde_run_enable = true;
 }
 
 int dw1000_set_tx_parameters(const struct dw1000_context *dw1000_ctx)
@@ -439,7 +472,7 @@ int dw1000_set_tx_parameters(const struct dw1000_context *dw1000_ctx)
     const struct spi_config *spi_cfg = &dw1000_ctx->spi_cfg;
     const struct dw1000_trx_para *trx_cfg = &dw1000_ctx->trx_cfg;
 
-    union dw1000_reg_tx_fctrl tx_fctrl = {
+    union DW1000_REG_TX_FCTRL tx_fctrl = {
         .ofs_00.tflen    = trx_cfg->tflen & 0x7f,
         .ofs_00.txbr     = trx_cfg->txbr_sel,
         .ofs_00.txprf    = trx_cfg->txprf_sel,
@@ -453,7 +486,7 @@ int dw1000_set_tx_parameters(const struct dw1000_context *dw1000_ctx)
         goto err;
 
     if (trx_cfg->txdlys) {
-        union dw1000_reg_dx_time dx_time = {
+        union DW1000_REG_DX_TIME dx_time = {
             .dx_time_l = (uint32_t)(trx_cfg->txdlys),
             .dx_time_h = (trx_cfg->txdlys >> 32) & 0xFF,
         };
@@ -476,7 +509,7 @@ int dw1000_init(struct dw1000_context *dw1000_ctx)
     /**
      * System Configuration
      */
-    union dw1000_reg_sys_cfg *sys_cfg = &dw1000_ctx->sys_cfg;
+    union DW1000_REG_SYS_CFG *sys_cfg = &dw1000_ctx->sys_cfg;
     sys_cfg->hirq_pol = DW1000_HIRQ_POL_ACTIVE_HIGH,
     sys_cfg->dis_drxb = true,
     sys_cfg->rxm110k  = true,
@@ -485,20 +518,43 @@ int dw1000_init(struct dw1000_context *dw1000_ctx)
         goto err;
 
     if (sys_cfg->rxwtoe) {
-        union dw1000_reg_rx_fwto *rx_fwto = &dw1000_ctx->rx_fwto;
+        union DW1000_REG_RX_FWTO *rx_fwto = &dw1000_ctx->rx_fwto;
         rx_fwto->rxfwto = 0;
         if (dw1000_non_indexed_write(spi_cfg, DW1000_RX_FWTO, rx_fwto, sizeof(*rx_fwto)))
             goto err;
     }
 
-    union dw1000_sub_reg_gpio_mode *gpio_mode = &dw1000_ctx->gpio_mode;
+    union DW1000_SUB_REG_GPIO_MODE *gpio_mode = &dw1000_ctx->gpio_mode;
     gpio_mode->value = 0;
     if (dw1000_short_indexed_write(spi_cfg, DW1000_GPIO_CTRL, DW1000_GPIO_MODE, gpio_mode, sizeof(*gpio_mode)))
         goto err;
 
-    union dw1000_reg_sniff_mode *sniff_mode = &dw1000_ctx->sniff_mode;
-    sniff_mode->value = 0;
-    if (dw1000_non_indexed_write(spi_cfg, DW1000_RX_SNIFF, sniff_mode, sizeof(*sniff_mode)))
+    union DW1000_REG_RX_SNIFF *rx_sniff = &dw1000_ctx->rx_sniff;
+    rx_sniff->value = 0;
+    if (dw1000_non_indexed_write(spi_cfg, DW1000_RX_SNIFF, rx_sniff, sizeof(*rx_sniff)))
+        goto err;
+
+    union DW1000_REG_PMSC *pmsc = &dw1000_ctx->pmsc;
+    if (dw1000_short_indexed_read(spi_cfg, DW1000_PMSC, DW1000_PMSC_CTRL1, &pmsc->pmsc_ctrl1, sizeof(pmsc->pmsc_ctrl1)))
+        goto err;
+
+    if (dw1000_ctx->lde_run_enable) {
+        union DW1000_REG_OTP_IF *otp_if = &dw1000_ctx->otp_if;
+        otp_if->otp_ctrl.ldeload = 1;
+        if (dw1000_short_indexed_write(spi_cfg, DW1000_OTP_IF, DW1000_OTP_CTRL, &otp_if->otp_ctrl, sizeof(otp_if->otp_ctrl)))
+            goto err;
+        pmsc->pmsc_ctrl1.lderune = 1;
+        if (dw1000_ctx->sleep_enable) {
+            union DW1000_REG_AON *aon = &dw1000_ctx->aon;
+            aon->aon_wcfg.onw_llde = 1;
+            if (dw1000_short_indexed_write(spi_cfg, DW1000_AON, DW1000_AON_WCFG, &aon->aon_wcfg, sizeof(aon->aon_wcfg)))
+                goto err;
+        }
+    } else {
+        pmsc->pmsc_ctrl1.lderune = 0;
+    }
+
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_PMSC, DW1000_PMSC_CTRL1, &pmsc->pmsc_ctrl1, sizeof(pmsc->pmsc_ctrl1)))
         goto err;
 
     // TODO: External Synchronisation
@@ -506,7 +562,7 @@ int dw1000_init(struct dw1000_context *dw1000_ctx)
     /**
      * Channel Configuration
      */
-    union dw1000_reg_chan_ctrl *chan_ctrl = &dw1000_ctx->chan_ctrl;
+    union DW1000_REG_CHAN_CTRL *chan_ctrl = &dw1000_ctx->chan_ctrl;
     chan_ctrl->tx_chan  = DW1000_CHAN_5,
     chan_ctrl->rx_chan  = DW1000_CHAN_5,
     chan_ctrl->rxprf    = DW1000_PRF_64MHZ,
@@ -518,7 +574,7 @@ int dw1000_init(struct dw1000_context *dw1000_ctx)
     if (dw1000_non_indexed_write(spi_cfg, DW1000_CHAN_CTRL, chan_ctrl, sizeof(*chan_ctrl)))
         goto err;
 
-    union dw1000_reg_fs_ctrl *fs_ctrl = &dw1000_ctx->fs_ctrl;
+    union DW1000_REG_FS_CTRL *fs_ctrl = &dw1000_ctx->fs_ctrl;
     if (dw1000_non_indexed_read(spi_cfg, DW1000_FS_CTRL, fs_ctrl, sizeof(*fs_ctrl)))
         goto err;
 
@@ -563,7 +619,7 @@ int dw1000_init(struct dw1000_context *dw1000_ctx)
     /**
      * Transmitter Configuration
      */
-    union dw1000_reg_tx_fctrl *tx_fctrl = &dw1000_ctx->tx_fctrl;
+    union DW1000_REG_TX_FCTRL *tx_fctrl = &dw1000_ctx->tx_fctrl;
     tx_fctrl->ofs_00.tflen    = 12,  // 8 + 4 bytes
     tx_fctrl->ofs_00.txbr     = DW1000_BR_110KBPS,
     tx_fctrl->ofs_00.txprf    = DW1000_PRF_64MHZ,
@@ -576,7 +632,7 @@ int dw1000_init(struct dw1000_context *dw1000_ctx)
     bool is_txprf_16mhz = dw1000_ctx->is_txprf_16mhz;
 
     // if (trx_cfg->txdlys) {
-    //     union dw1000_reg_dx_time dx_time = {
+    //     union DW1000_REG_DX_TIME dx_time = {
     //         .dx_time_l = (uint32_t)(trx_cfg->txdlys),
     //         .dx_time_h = (trx_cfg->txdlys >> 32) & 0xFF,
     //     };
@@ -584,7 +640,7 @@ int dw1000_init(struct dw1000_context *dw1000_ctx)
     //         goto err;
     // }
 
-    union dw1000_reg_tx_power *tx_power = &dw1000_ctx->tx_power;
+    union DW1000_REG_TX_POWER *tx_power = &dw1000_ctx->tx_power;
     if (sys_cfg->dis_stxp == false) {
         // Transmit Power Control, for Smart Transmit Power Control
         switch (chan_ctrl->tx_chan) {
@@ -636,7 +692,7 @@ int dw1000_init(struct dw1000_context *dw1000_ctx)
     /**
      * Receiver Configuration
      */
-    union dw1000_reg_drx_conf *drx_conf = &dw1000_ctx->drx_conf;
+    union DW1000_REG_DRX_CONF *drx_conf = &dw1000_ctx->drx_conf;
     // if (dw1000_non_indexed_read(spi_cfg, DW1000_DRX_CONF, drx_conf, sizeof(*drx_conf)))
     //     goto err;
     dw1000_ctx->is_standard_sfd = ((chan_ctrl->dwsfd || chan_ctrl->tnssfd || chan_ctrl->rnssfd) ? false : true);
@@ -724,7 +780,7 @@ int dw1000_init(struct dw1000_context *dw1000_ctx)
     if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_TUNE4H, &drx_conf->drx_tune4h, sizeof(drx_conf->drx_tune4h)))
         goto err;
 
-    union dw1000_reg_rf_conf *rf_conf = &dw1000_ctx->rf_conf;
+    union DW1000_REG_RF_CONF *rf_conf = &dw1000_ctx->rf_conf;
     if (dw1000_non_indexed_read(spi_cfg, DW1000_RF_CONF, rf_conf, sizeof(*rf_conf)))
         goto err;
 
@@ -785,13 +841,13 @@ int dw1000_init(struct dw1000_context *dw1000_ctx)
         goto err;
 
     // Clear the interrupt status
-    union dw1000_reg_sys_status sys_status = {.ofs_00.value = UINT32_MAX, .ofs_04.value = UINT8_MAX};
+    union DW1000_REG_SYS_STATUS sys_status = {.ofs_00.value = UINT32_MAX, .ofs_04.value = UINT8_MAX};
     if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_STATUS, &sys_status, sizeof(sys_status)))
         goto err;
     memset(&dw1000_ctx->sys_status, 0, sizeof(dw1000_ctx->sys_status));
 
     // Set the interrupt mask
-    union dw1000_reg_sys_mask sys_mask = {
+    union DW1000_REG_SYS_MASK sys_mask = {
         .mrxfcg    = 1,
         .mrxrfsl   = 1,
         .mrxrfto   = 1,
@@ -817,25 +873,20 @@ err:
     return -1;
 }
 
-int dw1000_sniff_mode_init(uint8_t type)
-{
-
-}
-
 /**
  * @brief Estimating the signal power in the first path.
  */
 float dw1000_cal_first_path_power_level(const struct spi_config *spi_cfg, const struct dw1000_trx_para *cfg)
 {
-    union dw1000_reg_rx_time rx_time = {0};
+    union DW1000_REG_RX_TIME rx_time = {0};
     if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_TIME, &rx_time, sizeof(rx_time)))
         goto err;
 
-    union dw1000_reg_rx_fqual rx_fqual = {0};
+    union DW1000_REG_RX_FQUAL rx_fqual = {0};
     if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_FQUAL, &rx_fqual, sizeof(rx_fqual)))
         goto err;
 
-    union dw1000_reg_rx_finfo rx_finfo = {0};
+    union DW1000_REG_RX_FINFO rx_finfo = {0};
     if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_FINFO, &rx_finfo, sizeof(rx_finfo)))
         goto err;
 
@@ -862,11 +913,11 @@ err:
  */
 float dw1000_cal_rx_power_level(const struct spi_config *spi_cfg, const struct dw1000_trx_para *cfg)
 {
-    union dw1000_reg_rx_fqual rx_fqual = {0};
+    union DW1000_REG_RX_FQUAL rx_fqual = {0};
     if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_FQUAL, &rx_fqual, sizeof(rx_fqual)))
         goto err;
 
-    union dw1000_reg_rx_finfo rx_finfo = {0};
+    union DW1000_REG_RX_FINFO rx_finfo = {0};
     if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_FINFO, &rx_finfo, sizeof(rx_finfo)))
         goto err;
 
@@ -889,7 +940,7 @@ err:
  */
 int dw1000_get_rx_buf_ptr(const struct spi_config *spi_cfg)
 {
-    union dw1000_reg_sys_status sys_sts = {0};
+    union DW1000_REG_SYS_STATUS sys_sts = {0};
     if (dw1000_non_indexed_read(spi_cfg, DW1000_SYS_STATUS, &sys_sts, sizeof(sys_sts)))
         goto err;
 
@@ -904,7 +955,7 @@ err:
  */
 int dw1000_set_rx_buf_ptr(const struct spi_config *spi_cfg)
 {
-    union dw1000_reg_sys_ctrl sys_ctrl = {
+    union DW1000_REG_SYS_CTRL sys_ctrl = {
         sys_ctrl.hrbpt = 1
     };
     if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CTRL, &sys_ctrl, sizeof(sys_ctrl)))
@@ -919,7 +970,7 @@ err:
 int dw1000_set_rx_parameters(const struct spi_config *spi_cfg, struct dw1000_trx_para *trx_cfg)
 {
     if (trx_cfg->rxdlye) {
-        union dw1000_reg_dx_time dx_time = {
+        union DW1000_REG_DX_TIME dx_time = {
             .dx_time_l = (uint32_t)(trx_cfg->rxdlye),
             .dx_time_h = (trx_cfg->rxdlye >> 32) & 0xFF,
         };
@@ -927,19 +978,19 @@ int dw1000_set_rx_parameters(const struct spi_config *spi_cfg, struct dw1000_trx
             goto err;
     }
 
-    union dw1000_sub_reg_drx_tune2 drx_tune2 = {
+    union DW1000_SUB_REG_DRX_TUNE2 drx_tune2 = {
         .value = trx_cfg->drx_tune2,
     };
     if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_TUNE2, &drx_tune2, sizeof(drx_tune2)))
         goto err;
 
-    union dw1000_sub_reg_drx_pretoc drx_pretoc = {
+    union DW1000_SUB_REG_DRX_PRETOC drx_pretoc = {
         .value = trx_cfg->drx_pretoc,
     };
     if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_PRETOC, &drx_pretoc, sizeof(drx_pretoc)))
         goto err;
 
-    union dw1000_reg_sys_ctrl sys_ctrl = {0};
+    union DW1000_REG_SYS_CTRL sys_ctrl = {0};
     // sys_ctrl.sfcst = 0;
     // sys_ctrl.txstrt = 1;
     // if (trx_cfg->txdlys)
@@ -986,7 +1037,7 @@ int dw1000_transmit_message(const struct spi_config *spi_cfg, struct dw1000_trx_
     dw1000_prepare_tx_buffer(spi_cfg, buf, len);
     // dw1000_set_tx_parameters(spi_cfg, trx_cfg);
 
-    union dw1000_reg_sys_ctrl sys_ctrl = {
+    union DW1000_REG_SYS_CTRL sys_ctrl = {
         .value = 0,
     };
 
@@ -1008,7 +1059,7 @@ err:
     return -1;
 }
 
-int dw1000_reg_list_check()
+int DW1000_REG_LIST_CHECK()
 {
     printf("%s\n", __func__);
 
@@ -1021,16 +1072,16 @@ int dw1000_reg_list_check()
         size_t size;
         switch (reg->reg_file_id) {
         case DW1000_SYS_CFG:
-            // size = sizeof(union dw1000_reg_tx_fctrl);
+            // size = sizeof(union DW1000_REG_TX_FCTRL);
             // if (reg->length != size) {
-            //     printf("dw1000_reg_tx_fctrl err: %x != %x\n", reg->length, size);
+            //     printf("DW1000_REG_TX_FCTRL err: %x != %x\n", reg->length, size);
             //     goto err;
             // }
             break;
         case DW1000_TX_FCTRL:
-            size = sizeof(union dw1000_reg_tx_fctrl);
+            size = sizeof(union DW1000_REG_TX_FCTRL);
             if (reg->length != size) {
-                printf("dw1000_reg_tx_fctrl err: %x != %x\n", reg->length, size);
+                printf("DW1000_REG_TX_FCTRL err: %x != %x\n", reg->length, size);
                 goto err;
             }
             break;
@@ -1062,7 +1113,7 @@ void dw1000_spi_master_test(const struct dw1000_context *dw1000_ctx)
     // if (dw1000_init(dw1000_ctx))
     //     return;
 
-    if (dw1000_reg_list_check() < 0)
+    if (DW1000_REG_LIST_CHECK() < 0)
         return;
 
     uint8_t tx_buf[BUF_SIZE], rx_buf[BUF_SIZE];
@@ -1084,7 +1135,7 @@ void dw1000_spi_master_test(const struct dw1000_context *dw1000_ctx)
 
             switch (reg->reg_file_id) {
             case DW1000_DEV_ID:
-                union dw1000_reg_dev_id *dev_id = (void *)rx_buf;
+                union DW1000_REG_DEV_ID *dev_id = (void *)rx_buf;
                 printf("dev_id->value               : %08x\n", dev_id->value);
                 printf("dev_id->rev                 : %x\n", dev_id->rev);
                 printf("dev_id->ver                 : %x\n", dev_id->ver);
@@ -1117,13 +1168,13 @@ void dw1000_spi_master_test(const struct dw1000_context *dw1000_ctx)
                 break;
 
             case DW1000_PANADR:
-                union dw1000_reg_panadr *panadr = (void *)rx_buf;
+                union DW1000_REG_PANADR *panadr = (void *)rx_buf;
                 printf("panadr->short_addr          : %x\n", panadr->short_addr);
                 printf("panadr->pan_id              : %x\n", panadr->pan_id);
                 break;
 
             case DW1000_SYS_CFG:
-                union dw1000_reg_sys_cfg *sys_cfg = (void *)rx_buf;
+                union DW1000_REG_SYS_CFG *sys_cfg = (void *)rx_buf;
                 printf("sys_cfg->value              : %08x\n", sys_cfg->value);
                 printf("sys_cfg->ffen               : %x\n", sys_cfg->ffen);
                 printf("sys_cfg->ffbc               : %x\n", sys_cfg->ffbc);
@@ -1151,7 +1202,7 @@ void dw1000_spi_master_test(const struct dw1000_context *dw1000_ctx)
                 break;
 
             case DW1000_TX_FCTRL:
-                union dw1000_reg_tx_fctrl *tx_fctrl = (void *)rx_buf;
+                union DW1000_REG_TX_FCTRL *tx_fctrl = (void *)rx_buf;
                 printf("Transmit Frame Length       : %d bytes\n", tx_fctrl->ofs_00.tflen);
                 printf("tx_fctrl->ofs_00.tfle       : %x\n", tx_fctrl->ofs_00.tfle);
                 printf("tx_fctrl->ofs_00.r          : %x\n", tx_fctrl->ofs_00.r);
@@ -1179,7 +1230,7 @@ void dw1000_spi_master_test(const struct dw1000_context *dw1000_ctx)
                 break;
 
             case DW1000_SYS_STATUS:
-                union dw1000_reg_sys_status *sys_status = (void *)rx_buf;
+                union DW1000_REG_SYS_STATUS *sys_status = (void *)rx_buf;
                 printf("sys_status->ofs_00.irqs     : %d\n", sys_status->ofs_00.irqs);
                 printf("sys_status->ofs_00.cplock   : %d\n", sys_status->ofs_00.cplock);
                 printf("sys_status->ofs_00.esyncr   : %d\n", sys_status->ofs_00.esyncr);
@@ -1227,34 +1278,8 @@ void dw1000_spi_master_test(const struct dw1000_context *dw1000_ctx)
 
                 break;
 
-            case DW1000_AON:
-                for (struct dw1000_reg *sub_reg = dw1000_aon_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
-                    if ((sub_reg->length > 64) || (sub_reg->length == 0))
-                        continue;
-
-                    memset(rx_buf, 0, sub_reg->length);
-                    if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
-                        goto err;
-
-                    print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
-
-                    switch (sub_reg->reg_file_id) {
-                    case DW1000_AON_CFG0:
-                        union dw1000_sub_reg_aon_cfg0 *aon_cfg0 = (void *)rx_buf;
-                        printf("aon_cfg0->sleep_en          : %d\n", aon_cfg0->sleep_en);
-                        printf("aon_cfg0->wake_pin          : %d\n", aon_cfg0->wake_pin);
-                        printf("aon_cfg0->wake_spi          : %d\n", aon_cfg0->wake_spi);
-                        printf("aon_cfg0->wake_cnt          : %d\n", aon_cfg0->wake_cnt);
-                        printf("aon_cfg0->lpdiv_en          : %d\n", aon_cfg0->lpdiv_en);
-                        printf("aon_cfg0->lpclkdiva         : %d\n", aon_cfg0->lpclkdiva);
-                        printf("aon_cfg0->sleep_tim         : %d\n", aon_cfg0->sleep_tim);
-                        break;
-                    }
-                }
-                break;
-
             case DW1000_CHAN_CTRL:
-                union dw1000_reg_chan_ctrl *chan_ctrl = (void *)rx_buf;
+                union DW1000_REG_CHAN_CTRL *chan_ctrl = (void *)rx_buf;
                 printf("chan_ctrl->tx_chan          : %d\n", chan_ctrl->tx_chan);
                 printf("chan_ctrl->rx_chan          : %d\n", chan_ctrl->rx_chan);
                 printf("chan_ctrl->rsvd             : %d\n", chan_ctrl->rsvd);
@@ -1312,6 +1337,45 @@ void dw1000_spi_master_test(const struct dw1000_context *dw1000_ctx)
                 }
                 break;
 
+            case DW1000_AON:
+                for (struct dw1000_reg *sub_reg = dw1000_aon_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
+                    if ((sub_reg->length > 64) || (sub_reg->length == 0))
+                        continue;
+
+                    memset(rx_buf, 0, sub_reg->length);
+                    if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
+                        goto err;
+
+                    print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
+
+                    switch (sub_reg->reg_file_id) {
+                    case DW1000_AON_CFG0:
+                        union DW1000_SUB_REG_AON_CFG0 *aon_cfg0 = (void *)rx_buf;
+                        printf("aon_cfg0->sleep_en          : %d\n", aon_cfg0->sleep_en);
+                        printf("aon_cfg0->wake_pin          : %d\n", aon_cfg0->wake_pin);
+                        printf("aon_cfg0->wake_spi          : %d\n", aon_cfg0->wake_spi);
+                        printf("aon_cfg0->wake_cnt          : %d\n", aon_cfg0->wake_cnt);
+                        printf("aon_cfg0->lpdiv_en          : %d\n", aon_cfg0->lpdiv_en);
+                        printf("aon_cfg0->lpclkdiva         : %d\n", aon_cfg0->lpclkdiva);
+                        printf("aon_cfg0->sleep_tim         : %d\n", aon_cfg0->sleep_tim);
+                        break;
+                    }
+                }
+                break;
+
+            case DW1000_OTP_IF:
+                for (struct dw1000_reg *sub_reg = dw1000_otp_if_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
+                    if ((sub_reg->length > 64) || (sub_reg->length == 0))
+                        continue;
+
+                    memset(rx_buf, 0, sub_reg->length);
+                    if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
+                        goto err;
+
+                    print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
+                }
+                break;
+
             case DW1000_DIG_DIAG:
                 for (struct dw1000_reg *sub_reg = dw1000_dig_diag_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
                     if ((sub_reg->length > 64) || (sub_reg->length == 0))
@@ -1325,16 +1389,29 @@ void dw1000_spi_master_test(const struct dw1000_context *dw1000_ctx)
 
                     switch (sub_reg->reg_file_id) {
                     case DW1000_EVC_CTRL:
-                        union dw1000_sub_reg_evc_ctrl *evc_ctrl = (void *)rx_buf;
+                        union DW1000_SUB_REG_EVC_CTRL *evc_ctrl = (void *)rx_buf;
                         printf("evc_ctrl->evc_en            : %d\n", evc_ctrl->evc_en);
                         printf("evc_ctrl->evc_clr           : %d\n", evc_ctrl->evc_clr);
                         break;
 
                     case DW1000_DIG_DIAG:
-                        union dw1000_sub_reg_diag_tmc *diag_tmc = (void *)rx_buf;
+                        union DW1000_SUB_REG_DIAG_TMC *diag_tmc = (void *)rx_buf;
                         printf("diag_tmc->tx_pstm           : %d\n", diag_tmc->tx_pstm);
                         break;
                     }
+                }
+                break;
+
+            case DW1000_PMSC:
+                for (struct dw1000_reg *sub_reg = dw1000_pmsc_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
+                    if ((sub_reg->length > 64) || (sub_reg->length == 0))
+                        continue;
+
+                    memset(rx_buf, 0, sub_reg->length);
+                    if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
+                        goto err;
+
+                    print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
                 }
                 break;
             };
