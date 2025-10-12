@@ -41,6 +41,8 @@ enum rp2350_gpio
 
 #define IRQ_PIN         GPIO20
 
+#define RSTn_PIN        GPIO21
+
 // #if (CONFIG_SPI_MASTER_MODE)
 #define SPI_INST        spi0
 // #define SPI_INST         spi_default // spi0

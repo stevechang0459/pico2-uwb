@@ -105,6 +105,11 @@ enum DW1000_SUB_REG_OFS
     DW1000_AGC_RES4     = 0x14,         // Reserved area 4
     DW1000_AGC_STAT1    = 0x1e,         // AGC Status
 
+    // Register file: 0x24 – External synchronisation control overview
+    DW1000_EC_CTRL      = 0x00,         // External clock synchronisation counter configuration
+    DW1000_EC_RXTC      = 0x04,         // External clock counter captured on RMARKER
+    DW1000_EC_GOLP      = 0x08,         // External clock offset to first path 1 GHz counter
+
     // Register file: 0x26 - GPIO control and status overview
     DW1000_GPIO_MODE    = 0x00,
     DW1000_GPIO_DIR     = 0x08,
@@ -140,6 +145,15 @@ enum DW1000_SUB_REG_OFS
     DW1000_RF_STATUS    = 0x2c,
     DW1000_LDOTUNE      = 0x30,
 
+    // Register file: 0x2A – Transmitter Calibration block overview
+    DW1000_TC_SARC      = 0x00,         // Transmitter Calibration – SAR control
+    DW1000_TC_SARL      = 0x03,         // Transmitter Calibration – Latest SAR readings
+    DW1000_TC_SARW      = 0x06,         // Transmitter Calibration – SAR readings at last Wake-Up
+    DW1000_TC_PG_CTRL   = 0x08,         // Transmitter Calibration – Pulse Generator Control
+    DW1000_TC_PG_STATUS = 0x09,         // Transmitter Calibration – Pulse Generator Status
+    DW1000_TC_PGDELAY   = 0x0B,         // Transmitter Calibration – Pulse Generator Delay
+    DW1000_TC_PGTEST    = 0x0C,         // Transmitter Calibration – Pulse Generator Test
+
     // Register file: 0x2B - Frequency synthesiser control block overview
     DW1000_FS_RES1      = 0x00,
     DW1000_FS_PLLCFG    = 0x07,
@@ -164,6 +178,15 @@ enum DW1000_SUB_REG_OFS
     DW1000_OTP_RDAT     = 0x0a,         // OTP Read Data
     DW1000_OTP_SRDAT    = 0x0e,         // OTP SR Read Data
     DW1000_OTP_SF       = 0x12,         // OTP Special Function
+
+    // Register file: 0x2E – Leading Edge Detection Interface overview
+    DW1000_LDE_THRESH   = 0x0000,        // RO, LDE Threshold report
+    DW1000_LDE_CFG1     = 0x0806,        // RW, LDE Configuration Register 1
+    DW1000_LDE_PPINDX   = 0x1000,        // RO, LDE Peak Path Index
+    DW1000_LDE_PPAMPL   = 0x1002,        // RO, LDE Peak Path Amplitude
+    DW1000_LDE_RXANTD   = 0x1804,        // RW, LDE Receive Antenna Delay configuration
+    DW1000_LDE_CFG2     = 0x1806,        // RW, LDE Configuration Register 2
+    DW1000_LDE_REPC     = 0x2804,        // RW, LDE Replica Coefficient configuration
 
     // Register file: 0x2F - Digital Diagnostics Interface overview
     DW1000_EVC_CTRL     = 0x00,
@@ -951,6 +974,7 @@ union DW1000_SUB_REG_AGC_CTRL1
         uint16_t dis_am : 1;
         uint16_t rsvd   : 15;
     };
+    uint16_t value;
 };
 
 _Static_assert(sizeof(union DW1000_SUB_REG_AGC_CTRL1) == 2, "union DW1000_SUB_REG_AGC_CTRL1 must be 2 bytes");
@@ -1037,7 +1061,65 @@ union DW1000_REG_AGC_CTRL
 
 _Static_assert(sizeof(union DW1000_REG_AGC_CTRL) == 33, "union DW1000_REG_AGC_CTRL must be 33 bytes");
 
+// Sub-Register 0x24:00 EC_CTRL, External clock synchronisation counter configuration
+union DW1000_SUB_REG_EC_CTRL
+{
+    struct
+    {
+        uint32_t ostsm  : 1;            // Bit[0] External transmit synchronisation mode enable.
+        uint32_t osrsm  : 1;            // Bit[1] External receive synchronisation mode enable.
+        uint32_t pllldt : 1;            // Bit[2] Clock PLL lock detect tune.
+        /**
+         * Bit[10:3] Wait counter used for external transmit synchronisation and
+         * external timebase reset.
+         */
+        uint32_t wait   : 8;
+        uint32_t ostrm  : 1;            // Bit[11] External timebase reset mode enable.
+        uint32_t rsvd   : 20;           // Bit[31:12] Reserved.
+    };
+    uint32_t value;
+};
+
+// Sub-Register 0x24:04 EC_RXTC, External clock counter captured on RMARKER
+union DW1000_SUB_REG_EC_RXTC
+{
+    struct
+    {
+        /**
+         * Bit[31:0] External clock synchronisation counter captured on RMARKER.
+         */
+        uint32_t rx_ts_est;
+    };
+    uint32_t value;
+};
+
+// Sub-Register 0x24:08 EC_GOLP, External clock offset to first path 1 GHz counter
+union DW1000_SUB_REG_EC_GOLP
+{
+    struct
+    {
+        /**
+         * Bit[5:0] This register contains the 1 GHz count from the arrival of
+         * the RMARKER and the next edge of the external clock.
+         */
+        uint32_t offset_ext : 6;
+        uint32_t rsvd       : 26;       // Bit[31:6] Reserved.
+    };
+    uint32_t value;
+};
+
 // Register file: 0x24 - External Synchronisation Control
+union DW1000_REG_EXT_SYNC
+{
+    struct
+    {
+        union DW1000_SUB_REG_EC_CTRL ec_ctrl;
+        union DW1000_SUB_REG_EC_RXTC ec_rxtc;
+        union DW1000_SUB_REG_EC_GOLP ec_golp;
+    };
+};
+
+_Static_assert(sizeof(union DW1000_REG_EXT_SYNC) == 12, "union DW1000_REG_EXT_SYNC must be 12 bytes");
 
 // Register file: 0x25 - Accumulator CIR memory
 
@@ -1436,11 +1518,19 @@ _Static_assert(sizeof(union DW1000_REG_RF_CONF) == 53, "union DW1000_REG_RF_CONF
 
 // Sub-Register 0x2A:09 - TC_PG_STATUS
 
-// Sub-Register 0x2A:0B - TC_PGDELAY
+// Sub-Register 0x2A:0B - TC_PGDELAY, Transmitter Calibration – Pulse Generator Delay
+union DW1000_SUB_REG_TC_PGDELAY
+{
+    uint8_t value;
+};
 
 // Sub-Register 0x2A:0C - TC_PGTEST
 
 // Register file: 0x2A - Transmitter Calibration block
+union DW1000_REG_TX_CAL
+{
+
+};
 
 /**
  * Sub-Register 0x2B:00 - FS_RES1
@@ -1794,27 +1884,71 @@ union DW1000_REG_OTP_IF
 
 _Static_assert(sizeof(union DW1000_REG_OTP_IF) == 19, "union DW1000_REG_OTP_IF must be 19 bytes");
 
-// Sub-Register 0x2E:0000 - LDE_THRESH
+// Sub-Register 0x2E:0000 - LDE_THRESH, LDE Threshold report
+union DW1000_SUB_REG_LDE_THRESH
+{
+    uint16_t value;                     // LDE Threshold report
+};
 
-// Sub-Register 0x2E:0806 - LDE_CFG1
+_Static_assert(sizeof(union DW1000_SUB_REG_LDE_THRESH) == 2, "union DW1000_SUB_REG_LDE_THRESH must be 2 bytes");
 
-// Sub-Register 0x2E:1000 - LDE_PPINDX
-
-// Sub-Register 0x2E:1002 - LDE_PPAMPL
-
-// Sub-Register 0x2E:1804 - LDE_RXANTD
-
-// Sub-Register 0x2E:1806 - LDE_CFG2
-
-// Sub-Register 0x2E:2804 - LDE_REPC
-
-// Register file: 0x2E - Leading Edge Detection Interface
-union DW1000_REG_LDE_IF
+// Sub-Register 0x2E:0806 - LDE_CFG1, LDE Configuration Register 1
+union DW1000_SUB_REG_LDE_CFG1
 {
     struct
     {
-
+        uint8_t ntm   : 5;              // Bit[4:0] Noise Threshold Multiplier.
+        uint8_t pmult : 3;              // Bit[7:5] Peak Multiplier.
     };
+    uint8_t value;                      // LDE Configuration Register 1
+};
+
+_Static_assert(sizeof(union DW1000_SUB_REG_LDE_CFG1) == 1, "union DW1000_SUB_REG_LDE_CFG1 must be 1 bytes");
+
+// Sub-Register 0x2E:1000 - LDE_PPINDX, LDE Peak Path Index
+union DW1000_SUB_REG_LDE_PPINDX
+{
+    uint16_t value;
+};
+
+// Sub-Register 0x2E:1002 - LDE_PPAMPL, LDE Peak Path Amplitude
+union DW1000_SUB_REG_LDE_PPAMPL
+{
+    uint16_t value;
+};
+
+// Sub-Register 0x2E:1804 - LDE_RXANTD, LDE Receive Antenna Delay configuration
+union DW1000_SUB_REG_LDE_RXANTD
+{
+    uint16_t value;
+};
+
+// Sub-Register 0x2E:1806 - LDE_CFG2, LDE Configuration Register 2
+union DW1000_SUB_REG_LDE_CFG2
+{
+    uint16_t value;                     // LDE Configuration Register 2
+};
+
+_Static_assert(sizeof(union DW1000_SUB_REG_LDE_CFG2) == 2, "union DW1000_SUB_REG_LDE_CFG2 must be 2 bytes");
+
+// Sub-Register 0x2E:2804 - LDE_REPC, LDE Replica Coefficient configuration
+union DW1000_SUB_REG_LDE_REPC
+{
+    uint16_t value;
+};
+
+/**
+ * Register file: 0x2E - Leading Edge Detection Interface
+ *
+ * PLEASE NOTE: Other areas within the address space of Register file: 0x2E –
+ * Leading Edge Detection Interface are reserved. To ensure proper operation of
+ * the LDE algorithm (i.e. to avoid loss of performance or a malfunction), care
+ * must be taken not to write to any byte locations other than those defined in
+ * the sub-sections.
+ */
+union DW1000_REG_LDE_IF
+{
+
 };
 
 _Static_assert(sizeof(union DW1000_REG_LDE_IF) == 0, "union DW1000_REG_LDE_IF must be 0 bytes");
@@ -2014,6 +2148,40 @@ union DW1000_REG_DIG_DIAG
 // Sub-Register 0x36:00 - PMSC_CTRL0, PMSC Control Register 0
 union DW1000_SUB_REG_PMSC_CTRL0
 {
+    struct
+    {
+        uint32_t sysclks     : 2; // Bit[1:0] System Clock Selection.
+        uint32_t rxclks      : 2; // Bit[3:2] Receiver Clock Selection.
+        uint32_t txclks      : 2; // Bit[5:4] Transmitter Clock Selection.
+        uint32_t face        : 1; // Bit[6] Force Accumulator Clock Enable.
+        uint32_t rsvd1       : 3; // Bit[9:7] Reserved.
+        uint32_t adcce       : 1; // Bit[10] (temperature and voltage) Analog-to-Digital Convertor Clock Enable.
+        uint32_t rsvd2       : 4; // Bit[14:11] Reserved.
+        uint32_t amce        : 1; // Bit[15] Accumulator Memory Clock Enable.
+        uint32_t gpce        : 1; // Bit[16] GPIO clock Enable.
+        uint32_t gprn        : 1; // Bit[17] GPIO reset (NOT), active low.
+        uint32_t gpdce       : 1; // Bit[18] GPIO De-bounce Clock Enable.
+        uint32_t gpdrn       : 1; // Bit[19] GPIO de-bounce reset (NOT), active low.
+        uint32_t rsvd3       : 3; // Bit[22:20] Reserved.
+        uint32_t khzclken    : 1; // Bit[23] Kilohertz clock Enable.
+        /**
+         * Bit[24] Value 0 means normal (TX sequencing control), value 1 means
+         * RX SNIFF mode control.
+         */
+        uint32_t pll2_seq_en : 1;
+        uint32_t rsvd4       : 3; // Bit[27:25] Reserved.
+        /**
+         * Bit[31:28] These four bits reset the IC TX, RX, Host Interface and
+         * the PMSC itself, essentially allowing a reset of the IC under
+         * software control.
+         */
+        uint32_t softreset   : 4;
+    };
+    struct
+    {
+        uint16_t word_l;
+        uint16_t word_h;
+    };
     uint32_t value;
 };
 
@@ -2036,7 +2204,7 @@ union DW1000_SUB_REG_PMSC_CTRL1
         uint32_t rsvd4     : 8;         // Bit[25:18] Reserved.
         uint32_t khzclkdiv : 6;         // Bit[31:26] Kilohertz clock divisor.
     };
-    // uint32_t value;
+    uint32_t value;
 };
 
 // Sub-Register 0x36:08 - PMSC_RES1, PMSC reserved area 1
@@ -2136,7 +2304,7 @@ struct dw1000_reg
     const char *mnemonic;
     const char *desc;
     uint16_t length;
-    uint8_t reg_file_id;
+    uint16_t reg_file_id;
     uint8_t reg_file_type;
 };
 
@@ -2194,6 +2362,16 @@ struct dw1000_context
      */
     union DW1000_REG_DRX_CONF drx_conf;
     union DW1000_REG_RF_CONF rf_conf;
+    /**
+     * Default Configurations that should be modified
+     */
+    union DW1000_REG_AGC_CTRL agc_ctrl;
+    union DW1000_SUB_REG_LDE_CFG1 lde_cfg1;
+    union DW1000_SUB_REG_LDE_CFG2 lde_cfg2;
+    union DW1000_SUB_REG_LDE_REPC lde_repc;
+    union DW1000_SUB_REG_TC_PGDELAY tc_pgdelay;
+    union DW1000_SUB_REG_PMSC_CTRL0 pmsc_ctrl0;
+    union DW1000_SUB_REG_EC_CTRL ec_ctrl;
     //
     struct dw1000_trx_para trx_cfg;
     bool is_standard_sfd;
@@ -2203,6 +2381,6 @@ struct dw1000_context
 };
 
 void dw1000_ctx_init(struct dw1000_context *dw1000_ctx);
-void dw1000_spi_master_test(const struct dw1000_context *dw1000_ctx);
+void dw1000_spi_master_test(struct dw1000_context *dw1000_ctx);
 
 #endif  // ~ DW1000_H
