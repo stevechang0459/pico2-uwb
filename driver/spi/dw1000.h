@@ -49,45 +49,45 @@
 // DW1000 Register File IDs
 enum DW1000_REG_FILE_ID
 {
-    DW1000_DEV_ID     = 0x00,
-    DW1000_EUI        = 0x01,
-    DW1000_PANADR     = 0x03,
-    DW1000_SYS_CFG    = 0x04,
-    DW1000_SYS_TIME   = 0x06,
-    DW1000_TX_FCTRL   = 0x08,
-    DW1000_TX_BUFFER  = 0x09,
-    DW1000_DX_TIME    = 0x0a,
-    DW1000_RX_FWTO    = 0x0c,
-    DW1000_SYS_CTRL   = 0x0d,
-    DW1000_SYS_MASK   = 0x0e,
-    DW1000_SYS_STATUS = 0x0f,
-    DW1000_RX_FINFO   = 0x10,
-    DW1000_RX_BUFFER  = 0x11,
-    DW1000_RX_FQUAL   = 0x12,
-    DW1000_RX_TTCKI   = 0x13,
-    DW1000_RX_TTCKO   = 0x14,
-    DW1000_RX_TIME    = 0x15,
-    DW1000_TX_TIME    = 0x17,
-    DW1000_TX_ANTD    = 0x18,
-    DW1000_SYS_STATE  = 0x19,
-    DW1000_ACK_RESP_T = 0x1a,
-    DW1000_RX_SNIFF   = 0x1d,
-    DW1000_TX_POWER   = 0x1e,
-    DW1000_CHAN_CTRL  = 0x1f,
-    DW1000_USR_SFD    = 0x21,
-    DW1000_AGC_CTRL   = 0x23,
-    DW1000_EXT_SYNC   = 0x24,
-    DW1000_ACC_MEM    = 0x25,
-    DW1000_GPIO_CTRL  = 0x26,
-    DW1000_DRX_CONF   = 0x27,
-    DW1000_RF_CONF    = 0x28,
-    DW1000_TX_CAL     = 0x2a,
-    DW1000_FS_CTRL    = 0x2b,
-    DW1000_AON        = 0x2c,
-    DW1000_OTP_IF     = 0x2d,
-    DW1000_LDE_CTRL   = 0x2e,
-    DW1000_DIG_DIAG   = 0x2f,
-    DW1000_PMSC       = 0x36,
+    DW1000_DEV_ID     = 0x00,           // 0x00
+    DW1000_EUI        = 0x01,           // 0x01
+    DW1000_PANADR     = 0x03,           // 0x03
+    DW1000_SYS_CFG    = 0x04,           // 0x04
+    DW1000_SYS_TIME   = 0x06,           // 0x06
+    DW1000_TX_FCTRL   = 0x08,           // 0x08
+    DW1000_TX_BUFFER  = 0x09,           // 0x09
+    DW1000_DX_TIME    = 0x0a,           // 0x0a
+    DW1000_RX_FWTO    = 0x0c,           // 0x0c
+    DW1000_SYS_CTRL   = 0x0d,           // 0x0d
+    DW1000_SYS_MASK   = 0x0e,           // 0x0e
+    DW1000_SYS_STATUS = 0x0f,           // 0x0f
+    DW1000_RX_FINFO   = 0x10,           // 0x10
+    DW1000_RX_BUFFER  = 0x11,           // 0x11
+    DW1000_RX_FQUAL   = 0x12,           // 0x12
+    DW1000_RX_TTCKI   = 0x13,           // 0x13
+    DW1000_RX_TTCKO   = 0x14,           // 0x14
+    DW1000_RX_TIME    = 0x15,           // 0x15
+    DW1000_TX_TIME    = 0x17,           // 0x17
+    DW1000_TX_ANTD    = 0x18,           // 0x18
+    DW1000_SYS_STATE  = 0x19,           // 0x19
+    DW1000_ACK_RESP_T = 0x1a,           // 0x1a
+    DW1000_RX_SNIFF   = 0x1d,           // 0x1d
+    DW1000_TX_POWER   = 0x1e,           // 0x1e
+    DW1000_CHAN_CTRL  = 0x1f,           // 0x1f
+    DW1000_USR_SFD    = 0x21,           // 0x21
+    DW1000_AGC_CTRL   = 0x23,           // 0x23
+    DW1000_EXT_SYNC   = 0x24,           // 0x24
+    DW1000_ACC_MEM    = 0x25,           // 0x25
+    DW1000_GPIO_CTRL  = 0x26,           // 0x26
+    DW1000_DRX_CONF   = 0x27,           // 0x27
+    DW1000_RF_CONF    = 0x28,           // 0x28
+    DW1000_TX_CAL     = 0x2a,           // 0x2a
+    DW1000_FS_CTRL    = 0x2b,           // 0x2b
+    DW1000_AON        = 0x2c,           // 0x2c
+    DW1000_OTP_IF     = 0x2d,           // 0x2d
+    DW1000_LDE_CTRL   = 0x2e,           // 0x2e
+    DW1000_DIG_DIAG   = 0x2f,           // 0x2f
+    DW1000_PMSC       = 0x36,           // 0x36
     DW1000_REG_FILE_ID_MAX = 0x40
 };
 
@@ -2185,6 +2185,8 @@ union DW1000_SUB_REG_PMSC_CTRL0
     uint32_t value;
 };
 
+_Static_assert(sizeof(union DW1000_SUB_REG_PMSC_CTRL0) == 4, "union DW1000_SUB_REG_PMSC_CTRL0 must be 4 bytes");
+
 // Sub-Register 0x36:04 - PMSC_CTRL1, PMSC Control Register 1
 union DW1000_SUB_REG_PMSC_CTRL1
 {
@@ -2204,8 +2206,15 @@ union DW1000_SUB_REG_PMSC_CTRL1
         uint32_t rsvd4     : 8;         // Bit[25:18] Reserved.
         uint32_t khzclkdiv : 6;         // Bit[31:26] Kilohertz clock divisor.
     };
+    struct
+    {
+        uint16_t word_l;
+        uint16_t word_h;
+    };
     uint32_t value;
 };
+
+_Static_assert(sizeof(union DW1000_SUB_REG_PMSC_CTRL1) == 4, "union DW1000_SUB_REG_PMSC_CTRL1 must be 4 bytes");
 
 // Sub-Register 0x36:08 - PMSC_RES1, PMSC reserved area 1
 union DW1000_SUB_REG_PMSC_RES1

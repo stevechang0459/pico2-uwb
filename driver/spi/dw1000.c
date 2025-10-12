@@ -269,7 +269,7 @@ int dw1000_non_indexed_write(const struct spi_config *spi_cfg, uint8_t reg_file_
 
     memset(m_tx_buf, 0, num_bytes);
     m_tx_buf[0] = header.value;
-    memcpy(m_tx_buf + 1, buf, len);
+    memcpy(m_tx_buf + header_size, buf, len);
 
     // t9: Last SPICLK to SPICSn de-asserted, 40 ns
     // sleep_us(1);
@@ -344,6 +344,7 @@ int dw1000_short_indexed_write(const struct spi_config *spi_cfg, uint8_t reg_fil
     memset(m_tx_buf, 0, num_bytes);
     m_tx_buf[0] = header.value[0];
     m_tx_buf[1] = header.value[1];
+    memcpy(m_tx_buf + header_size, buf, len);
 
     // t9: Last SPICLK to SPICSn de-asserted, 40 ns
     // sleep_us(1);
@@ -422,6 +423,7 @@ int dw1000_long_indexed_write(const struct spi_config *spi_cfg, uint8_t reg_file
     m_tx_buf[0] = header.value[0];
     m_tx_buf[1] = header.value[1];
     m_tx_buf[2] = header.value[2];
+    memcpy(m_tx_buf + header_size, buf, len);
 
     // t9: Last SPICLK to SPICSn de-asserted, 40 ns
     // sleep_us(1);
@@ -437,6 +439,348 @@ int dw1000_long_indexed_write(const struct spi_config *spi_cfg, uint8_t reg_file
     return 0;
 err:
     printf("%s failed\n", __func__);
+    return -1;
+}
+
+static const char *prf[] = {
+    [DW1000_PRF_4MHZ]  = "4 MHz",
+    [DW1000_PRF_16MHZ] = "16 MHz",
+    [DW1000_PRF_64MHZ] = "64 MHz",
+    [DW1000_PRF_RSVD]  = "Reserved",
+};
+
+int dw1000_dump_all_regs(const struct spi_config *spi_cfg)
+{
+    uint8_t tx_buf[4096], rx_buf[4096];
+    memset(tx_buf, 0, sizeof(tx_buf));
+    memset(rx_buf, 0, sizeof(rx_buf));
+
+    for (const struct dw1000_reg *reg = dw1000_regs; reg->mnemonic != NULL; reg++) {
+        if ((reg->length > 64) || (reg->length == 0 && reg->reg_file_id != DW1000_LDE_CTRL))
+            continue;
+
+        // if (reg->reg_file_id != DW1000_SYS_STATUS)
+        //     continue;
+
+        if (reg->reg_file_id != DW1000_LDE_CTRL) {
+            memset(rx_buf, 0, reg->length);
+            if (dw1000_non_indexed_read(spi_cfg, reg->reg_file_id, rx_buf, reg->length))
+                goto err;
+            print_buf(rx_buf, reg->length, "Register file: 0x%02X - %s\n", reg->reg_file_id, reg->desc);
+        }
+
+        switch (reg->reg_file_id) {
+        case DW1000_DEV_ID:
+            union DW1000_REG_DEV_ID *dev_id = (void *)rx_buf;
+            printf("dev_id->value               : %08x\n", dev_id->value);
+            printf("dev_id->rev                 : %x\n", dev_id->rev);
+            printf("dev_id->ver                 : %x\n", dev_id->ver);
+            printf("dev_id->model               : %x\n", dev_id->model);
+            printf("dev_id->ridtag              : %x\n", dev_id->ridtag);
+
+            memset(rx_buf, 0, reg->length);
+            if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, 2, rx_buf, 2))
+                goto err;
+            print_buf(rx_buf, 2, NULL);
+            break;
+
+        case DW1000_EUI:
+            tx_buf[0] = 0x00;
+            tx_buf[1] = 0x00;
+            tx_buf[2] = 0x00;
+            tx_buf[3] = 0x00;
+            tx_buf[4] = 0x00;
+            tx_buf[5] = 0x3a;
+            tx_buf[6] = 0x66;
+            tx_buf[7] = 0xdc;
+            if (dw1000_non_indexed_write(spi_cfg, reg->reg_file_id, tx_buf, reg->length))
+                goto err;
+
+            memset(rx_buf, 0, reg->length);
+            if (dw1000_non_indexed_read(spi_cfg, reg->reg_file_id, rx_buf, reg->length))
+                goto err;
+
+            print_buf(rx_buf, reg->length, "%s (%02xh)\n", reg->desc, reg->reg_file_id);
+            break;
+
+        case DW1000_PANADR:
+            union DW1000_REG_PANADR *panadr = (void *)rx_buf;
+            printf("panadr->short_addr          : %x\n", panadr->short_addr);
+            printf("panadr->pan_id              : %x\n", panadr->pan_id);
+            break;
+
+        case DW1000_SYS_CFG:
+            union DW1000_REG_SYS_CFG *sys_cfg = (void *)rx_buf;
+            printf("sys_cfg->value              : %08x\n", sys_cfg->value);
+            printf("sys_cfg->ffen               : %x\n", sys_cfg->ffen);
+            printf("sys_cfg->ffbc               : %x\n", sys_cfg->ffbc);
+            printf("sys_cfg->ffab               : %x\n", sys_cfg->ffab);
+            printf("sys_cfg->ffad               : %x\n", sys_cfg->ffad);
+            printf("sys_cfg->ffaa               : %x\n", sys_cfg->ffaa);
+            printf("sys_cfg->ffam               : %x\n", sys_cfg->ffam);
+            printf("sys_cfg->ffar               : %x\n", sys_cfg->ffar);
+            printf("sys_cfg->ffa4               : %x\n", sys_cfg->ffa4);
+            printf("sys_cfg->ffa5               : %x\n", sys_cfg->ffa5);
+            printf("sys_cfg->hirq_pol           : %x\n", sys_cfg->hirq_pol);
+            printf("sys_cfg->spi_edge           : %x\n", sys_cfg->spi_edge);
+            printf("sys_cfg->dis_fce            : %x\n", sys_cfg->dis_fce);
+            printf("sys_cfg->dis_drxb           : %x\n", sys_cfg->dis_drxb);
+            printf("sys_cfg->dis_phe            : %x\n", sys_cfg->dis_phe);
+            printf("sys_cfg->dis_rsde           : %x\n", sys_cfg->dis_rsde);
+            printf("sys_cfg->fcs_init2f         : %x\n", sys_cfg->fcs_init2f);
+            printf("sys_cfg->phr_mode           : %x\n", sys_cfg->phr_mode);
+            printf("sys_cfg->dis_stxp           : %x\n", sys_cfg->dis_stxp);
+            printf("sys_cfg->rxm110k            : %x\n", sys_cfg->rxm110k);
+            printf("sys_cfg->rxwtoe             : %x\n", sys_cfg->rxwtoe);
+            printf("sys_cfg->rxautr             : %x\n", sys_cfg->rxautr);
+            printf("sys_cfg->autoack            : %x\n", sys_cfg->autoack);
+            printf("sys_cfg->aackpend           : %x\n", sys_cfg->aackpend);
+            break;
+
+        case DW1000_TX_FCTRL:
+            union DW1000_REG_TX_FCTRL *tx_fctrl = (void *)rx_buf;
+            printf("Transmit Frame Length       : %d bytes\n", tx_fctrl->ofs_00.tflen);
+            printf("tx_fctrl->ofs_00.tfle       : %x\n", tx_fctrl->ofs_00.tfle);
+            printf("tx_fctrl->ofs_00.r          : %x\n", tx_fctrl->ofs_00.r);
+            uint16_t txbr[4] = {
+                [0]  = 110,
+                [1]  = 850,
+                [2]  = 6800,
+            };
+            printf("PRF                         : %d kbps\n", txbr[tx_fctrl->ofs_00.txbr]);
+            printf("tx_fctrl->ofs_00.tr         : %x\n", tx_fctrl->ofs_00.tr);
+            printf("PRF                         : %d (%s)\n", tx_fctrl->ofs_00.txprf, prf[tx_fctrl->ofs_00.txprf]);
+            uint16_t txpsr[16] = {
+                [4]  = 64,
+                [5]  = 128,
+                [6]  = 256,
+                [7]  = 512,
+                [8]  = 1024,
+                [9]  = 1536,
+                [10] = 2048,
+                [12] = 4096,
+            };
+            printf("Preamble Length             : %d bytes\n", txpsr[tx_fctrl->ofs_00.pe << 2 | tx_fctrl->ofs_00.txpsr]);
+            printf("tx_fctrl->ofs_00.txboffs    : %x\n", tx_fctrl->ofs_00.txboffs);
+            printf("tx_fctrl->ofs_04.ifsdelay   : %x\n", tx_fctrl->ofs_04.ifsdelay);
+            break;
+
+        case DW1000_SYS_STATUS:
+            union DW1000_REG_SYS_STATUS *sys_status = (void *)rx_buf;
+            printf("sys_status->ofs_00.irqs     : %d\n", sys_status->ofs_00.irqs);
+            printf("sys_status->ofs_00.cplock   : %d\n", sys_status->ofs_00.cplock);
+            printf("sys_status->ofs_00.esyncr   : %d\n", sys_status->ofs_00.esyncr);
+            printf("sys_status->ofs_00.aat      : %d\n", sys_status->ofs_00.aat);
+            printf("sys_status->ofs_00.txfrb    : %d\n", sys_status->ofs_00.txfrb);
+            printf("sys_status->ofs_00.txprs    : %d\n", sys_status->ofs_00.txprs);
+            printf("sys_status->ofs_00.txphs    : %d\n", sys_status->ofs_00.txphs);
+            printf("sys_status->ofs_00.txfrs    : %d\n", sys_status->ofs_00.txfrs);
+            //
+            printf("sys_status->ofs_00.rxdfr    : %d\n", sys_status->ofs_00.rxdfr);
+            printf("sys_status->ofs_00.rxsfdd   : %d\n", sys_status->ofs_00.rxsfdd);
+            printf("sys_status->ofs_00.ldedone  : %d\n", sys_status->ofs_00.ldedone);
+            printf("sys_status->ofs_00.rxphd    : %d\n", sys_status->ofs_00.rxphd);
+            printf("sys_status->ofs_00.rxphe    : %d\n", sys_status->ofs_00.rxphe);
+            printf("sys_status->ofs_00.rxdfr    : %d\n", sys_status->ofs_00.rxdfr);
+            printf("sys_status->ofs_00.rxfcg    : %d\n", sys_status->ofs_00.rxfcg);
+            printf("sys_status->ofs_00.rxfce    : %d\n", sys_status->ofs_00.rxfce);
+            //
+            printf("sys_status->ofs_00.rxrfsl   : %d\n", sys_status->ofs_00.rxrfsl);
+            printf("sys_status->ofs_00.rxrfto   : %d\n", sys_status->ofs_00.rxrfto);
+            printf("sys_status->ofs_00.ldeerr   : %d\n", sys_status->ofs_00.ldeerr);
+            printf("sys_status->ofs_00.rsvd     : %d\n", sys_status->ofs_00.rsvd);
+            printf("sys_status->ofs_00.rxovrr   : %d\n", sys_status->ofs_00.rxovrr);
+            printf("sys_status->ofs_00.rxpto    : %d\n", sys_status->ofs_00.rxpto);
+            printf("sys_status->ofs_00.gpioirq  : %d\n", sys_status->ofs_00.gpioirq);
+            printf("sys_status->ofs_00.slp2init : %d\n", sys_status->ofs_00.slp2init);
+            //
+            printf("sys_status->ofs_00.rfpll_ll : %d\n", sys_status->ofs_00.rfpll_ll);
+            printf("sys_status->ofs_00.clkpll_ll: %d\n", sys_status->ofs_00.clkpll_ll);
+            printf("sys_status->ofs_00.rxsfdto  : %d\n", sys_status->ofs_00.rxsfdto);
+            printf("sys_status->ofs_00.hpdwarn  : %d\n", sys_status->ofs_00.hpdwarn);
+            printf("sys_status->ofs_00.txberr   : %d\n", sys_status->ofs_00.txberr);
+            printf("sys_status->ofs_00.affrej   : %d\n", sys_status->ofs_00.affrej);
+            printf("sys_status->ofs_00.hsrbp    : %d\n", sys_status->ofs_00.hsrbp);
+            printf("sys_status->ofs_00.icrbp    : %d\n", sys_status->ofs_00.icrbp);
+            //
+            printf("sys_status->ofs_04.affrej   : %d\n", sys_status->ofs_04.rxrscs);
+            printf("sys_status->ofs_04.hsrbp    : %d\n", sys_status->ofs_04.rxprej);
+            printf("sys_status->ofs_04.icrbp    : %d\n", sys_status->ofs_04.txpute);
+            printf("sys_status->ofs_04.rsvd     : %d\n", sys_status->ofs_04.rsvd);
+            sys_status->ofs_00.value = 0xFFFFFFFF;
+            sys_status->ofs_04.value = 0xFF;;
+            if (dw1000_non_indexed_write(spi_cfg, reg->reg_file_id, sys_status, sizeof(*sys_status)))
+                goto err;
+
+            break;
+
+        case DW1000_CHAN_CTRL:
+            union DW1000_REG_CHAN_CTRL *chan_ctrl = (void *)rx_buf;
+            printf("chan_ctrl->tx_chan          : %d\n", chan_ctrl->tx_chan);
+            printf("chan_ctrl->rx_chan          : %d\n", chan_ctrl->rx_chan);
+            printf("chan_ctrl->rsvd             : %d\n", chan_ctrl->rsvd);
+            printf("chan_ctrl->dwsfd            : %d\n", chan_ctrl->dwsfd);
+            printf("chan_ctrl->rxprf            : %d (%s)\n", chan_ctrl->rxprf, prf[chan_ctrl->rxprf]);
+            printf("chan_ctrl->tnssfd           : %d\n", chan_ctrl->tnssfd);
+            printf("chan_ctrl->rnssfd           : %d\n", chan_ctrl->rnssfd);
+            const char *pcode[] = {
+                [1 ... 8]   = "For 16 MHz PRF",
+                [9 ... 12]  = "For 64 MHz PRF",
+                [17 ... 20] = "For 64 MHz PRF",
+                [13 ... 16] = "For 64 MHz PRF (DPS)",
+                [21 ... 24] = "For 64 MHz PRF (DPS)",
+            };
+            printf("chan_ctrl->tx_pcode         : %d (%s)\n", chan_ctrl->tx_pcode, pcode[chan_ctrl->tx_pcode]);
+            printf("chan_ctrl->rx_pcode         : %d (%s)\n", chan_ctrl->rx_pcode, pcode[chan_ctrl->rx_pcode]);
+            break;
+
+        case DW1000_AGC_CTRL:
+            for (struct dw1000_reg *sub_reg = dw1000_agc_ctrl_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
+                if ((sub_reg->length > 64) || (sub_reg->length == 0))
+                    continue;
+
+                memset(rx_buf, 0, sub_reg->length);
+                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
+                    goto err;
+
+                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
+            }
+            break;
+
+        case DW1000_DRX_CONF:
+            for (struct dw1000_reg *sub_reg = dw1000_drx_conf_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
+                if ((sub_reg->length > 64) || (sub_reg->length == 0))
+                    continue;
+
+                memset(rx_buf, 0, sub_reg->length);
+                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
+                    goto err;
+
+                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
+            }
+            break;
+
+        case DW1000_RF_CONF:
+            for (struct dw1000_reg *sub_reg = dw1000_rf_conf_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
+                if ((sub_reg->length > 64) || (sub_reg->length == 0))
+                    continue;
+
+                memset(rx_buf, 0, sub_reg->length);
+                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
+                    goto err;
+
+                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
+            }
+            break;
+
+        case DW1000_FS_CTRL:
+            for (struct dw1000_reg *sub_reg = dw1000_fs_ctrl_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
+                if ((sub_reg->length > 64) || (sub_reg->length == 0))
+                    continue;
+
+                memset(rx_buf, 0, sub_reg->length);
+                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
+                    goto err;
+
+                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
+            }
+            break;
+
+        case DW1000_AON:
+            for (struct dw1000_reg *sub_reg = dw1000_aon_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
+                if ((sub_reg->length > 64) || (sub_reg->length == 0))
+                    continue;
+
+                memset(rx_buf, 0, sub_reg->length);
+                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
+                    goto err;
+
+                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
+
+                switch (sub_reg->reg_file_id) {
+                case DW1000_AON_CFG0:
+                    union DW1000_SUB_REG_AON_CFG0 *aon_cfg0 = (void *)rx_buf;
+                    printf("aon_cfg0->sleep_en          : %d\n", aon_cfg0->sleep_en);
+                    printf("aon_cfg0->wake_pin          : %d\n", aon_cfg0->wake_pin);
+                    printf("aon_cfg0->wake_spi          : %d\n", aon_cfg0->wake_spi);
+                    printf("aon_cfg0->wake_cnt          : %d\n", aon_cfg0->wake_cnt);
+                    printf("aon_cfg0->lpdiv_en          : %d\n", aon_cfg0->lpdiv_en);
+                    printf("aon_cfg0->lpclkdiva         : %d\n", aon_cfg0->lpclkdiva);
+                    printf("aon_cfg0->sleep_tim         : %d\n", aon_cfg0->sleep_tim);
+                    break;
+                }
+            }
+            break;
+
+        case DW1000_OTP_IF:
+            for (struct dw1000_reg *sub_reg = dw1000_otp_if_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
+                if ((sub_reg->length > 64) || (sub_reg->length == 0))
+                    continue;
+
+                memset(rx_buf, 0, sub_reg->length);
+                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
+                    goto err;
+
+                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
+            }
+            break;
+
+        case DW1000_LDE_CTRL:
+            for (struct dw1000_reg *sub_reg = dw1000_lde_ctrl_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
+                if ((sub_reg->length > 64) || (sub_reg->length == 0))
+                    continue;
+
+                memset(rx_buf, 0, sub_reg->length);
+                if (dw1000_long_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
+                    goto err;
+
+                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
+            }
+            break;
+
+        case DW1000_DIG_DIAG:
+            for (struct dw1000_reg *sub_reg = dw1000_dig_diag_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
+                if ((sub_reg->length > 64) || (sub_reg->length == 0))
+                    continue;
+
+                memset(rx_buf, 0, sub_reg->length);
+                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
+                    goto err;
+
+                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
+
+                switch (sub_reg->reg_file_id) {
+                case DW1000_EVC_CTRL:
+                    union DW1000_SUB_REG_EVC_CTRL *evc_ctrl = (void *)rx_buf;
+                    printf("evc_ctrl->evc_en            : %d\n", evc_ctrl->evc_en);
+                    printf("evc_ctrl->evc_clr           : %d\n", evc_ctrl->evc_clr);
+                    break;
+
+                case DW1000_DIG_DIAG:
+                    union DW1000_SUB_REG_DIAG_TMC *diag_tmc = (void *)rx_buf;
+                    printf("diag_tmc->tx_pstm           : %d\n", diag_tmc->tx_pstm);
+                    break;
+                }
+            }
+            break;
+
+        case DW1000_PMSC:
+            for (struct dw1000_reg *sub_reg = dw1000_pmsc_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
+                if ((sub_reg->length > 64) || (sub_reg->length == 0))
+                    continue;
+
+                memset(rx_buf, 0, sub_reg->length);
+                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
+                    goto err;
+
+                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
+            }
+            break;
+        };
+    }
+
+    return 0;
+err:
     return -1;
 }
 
@@ -465,10 +809,10 @@ int driver_dw1000_spi_init(const struct spi_config *spi_cfg)
 
     gpio_init(RSTn_PIN);
     gpio_set_dir(RSTn_PIN, GPIO_OUT);
-    gpio_put(RSTn_PIN, 0);
-    sleep_ms(5);
-    gpio_put(RSTn_PIN, 1);
-    sleep_ms(1);
+    // gpio_put(RSTn_PIN, 0);
+    // sleep_ms(5);
+    // gpio_put(RSTn_PIN, 1);
+    // sleep_ms(1);
 
     // Make the CS pin available to picotool
     // bi_decl(bi_1pin_with_name(SPI0_CSN_PIN, "SPI CS"));
@@ -538,6 +882,28 @@ err:
     return -1;
 }
 
+int dw1000_hard_reset(struct dw1000_context *dw1000_ctx)
+{
+    printf("RSTn S\n");
+    gpio_put(RSTn_PIN, 0);
+    sleep_ms(1);
+    gpio_put(RSTn_PIN, 1);
+    sleep_ms(1);
+    printf("RSTn E\n");
+
+    // Enable Clock PLL lock detect tune.
+    const struct spi_config *spi_cfg = &dw1000_ctx->spi_cfg;
+    union DW1000_SUB_REG_EC_CTRL *ec_ctrl = &dw1000_ctx->ec_ctrl;
+    ec_ctrl->pllldt = 1;
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_EXT_SYNC, DW1000_EC_CTRL, ec_ctrl, sizeof(*ec_ctrl)))
+        goto err;
+
+    return 0;
+err:
+    printf("%s failed\n", __func__);
+    return -1;
+}
+
 /**
  * TODO: LDOTUNE
  * TODO: External Synchronisation
@@ -549,15 +915,10 @@ int dw1000_init(struct dw1000_context *dw1000_ctx)
 
     // return 0;
 
-    // Wait PLL Lock
-    // Enable Clock PLL lock detect tune.
-    union DW1000_SUB_REG_EC_CTRL *ec_ctrl = &dw1000_ctx->ec_ctrl;
-    ec_ctrl->pllldt = 1;
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_EXT_SYNC, DW1000_EC_CTRL, ec_ctrl, sizeof(*ec_ctrl)))
+    if (dw1000_hard_reset(dw1000_ctx))
         goto err;
-    sleep_us(150);
-    sleep_ms(1000);
 
+    // Wait PLL Lock
     union DW1000_REG_SYS_STATUS sys_status;
     union DW1000_SUB_REG_RF_STATUS rf_status;
     for (int i = 0; ; i++) {
@@ -565,42 +926,25 @@ int dw1000_init(struct dw1000_context *dw1000_ctx)
             printf("Clock PLL Lock failed\n");
             return -1;
         }
+
         if (dw1000_non_indexed_read(spi_cfg, DW1000_SYS_STATUS, &sys_status, sizeof(sys_status)))
-            goto err;
-        printf("sys_status.ofs_00.value:%08x\n", sys_status.ofs_00.value);
-        if (sys_status.ofs_00.value != UINT32_MAX) {
-            if (sys_status.ofs_00.cplock) {
-                printf("sys_status.ofs_00.cplock\n");
-            }
-            if (sys_status.ofs_00.clkpll_ll) {
-                printf("sys_status.ofs_00.clkpll_ll\n");
-            }
-        }
-        sys_status.ofs_00.value = UINT32_MAX;
-        sys_status.ofs_04.value = UINT8_MAX;
-        if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_STATUS, &sys_status, sizeof(sys_status)))
             goto err;
         if (dw1000_short_indexed_read(spi_cfg, DW1000_RF_CONF, DW1000_RF_STATUS, &rf_status, sizeof(rf_status)))
             goto err;
-        printf("rf_status.value:%08x\n", rf_status.value);
-
-        if (!rf_status.cplllock && (rf_status.cpllhigh || rf_status.cplllow)) {
-            gpio_put(RSTn_PIN, 0);
-            printf("RSTn S\n");
-            sleep_ms(5);
-            gpio_put(RSTn_PIN, 1);
-            sleep_ms(1);
-            printf("RSTn E\n");
-        }
-
-        if (rf_status.value != UINT32_MAX && rf_status.cplllock) {
+        printf("sys_status:%02x_%08x\n", sys_status.ofs_04.value, sys_status.ofs_00.value);
+        printf("rf_status:%08x\n", rf_status.value);
+        if (!sys_status.ofs_00.cplock || !rf_status.cplllock) {
+            if (dw1000_hard_reset(dw1000_ctx))
+                goto err;
+        } else {
             printf("The digital clock PLL has locked.\n");
+            sys_status.ofs_00.value = UINT32_MAX;
+            sys_status.ofs_04.value = UINT8_MAX;
+            if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_STATUS, &sys_status, sizeof(sys_status)))
+                goto err;
             break;
         }
-        sleep_ms(1000);
     }
-
-    return 0;
 
     /**
      * System Configuration
@@ -634,6 +978,7 @@ int dw1000_init(struct dw1000_context *dw1000_ctx)
     union DW1000_REG_PMSC *pmsc = &dw1000_ctx->pmsc;
     if (dw1000_short_indexed_read(spi_cfg, DW1000_PMSC, DW1000_PMSC_CTRL1, &pmsc->pmsc_ctrl1, sizeof(pmsc->pmsc_ctrl1)))
         goto err;
+    printf("pmsc->pmsc_ctrl1:%08x\n", pmsc->pmsc_ctrl1.value);
 
     if (dw1000_ctx->lde_run_enable) {
         union DW1000_SUB_REG_PMSC_CTRL0 *pmsc_ctrl0 = &dw1000_ctx->pmsc_ctrl0;
@@ -665,8 +1010,17 @@ int dw1000_init(struct dw1000_context *dw1000_ctx)
     if (dw1000_short_indexed_write(spi_cfg, DW1000_PMSC, DW1000_PMSC_CTRL1, &pmsc->pmsc_ctrl1, sizeof(pmsc->pmsc_ctrl1)))
         goto err;
 
+    if (dw1000_short_indexed_read(spi_cfg, DW1000_PMSC, DW1000_PMSC_CTRL1, &pmsc->pmsc_ctrl1, sizeof(pmsc->pmsc_ctrl1)))
+        goto err;
+    printf("pmsc->pmsc_ctrl1:%08x\n", pmsc->pmsc_ctrl1.value);
+
     // TODO: LDOTUNE
     // TODO: External Synchronisation
+
+    // if (dw1000_dump_all_regs(spi_cfg))
+    //     goto err;
+
+    // return 0;
 
     /**
      * Channel Configuration
@@ -1312,349 +1666,7 @@ err:
     return -1;
 }
 
-static const char *prf[] = {
-    [DW1000_PRF_4MHZ]  = "4 MHz",
-    [DW1000_PRF_16MHZ] = "16 MHz",
-    [DW1000_PRF_64MHZ] = "64 MHz",
-    [DW1000_PRF_RSVD]  = "Reserved",
-};
-
 #if (CONFIG_SPI_MASTER_MODE)
-int dw1000_dump_all_regs(const struct spi_config *spi_cfg)
-{
-    uint8_t tx_buf[4096], rx_buf[4096];
-    memset(tx_buf, 0, sizeof(tx_buf));
-    memset(rx_buf, 0, sizeof(rx_buf));
-
-    for (const struct dw1000_reg *reg = dw1000_regs; reg->mnemonic != NULL; reg++) {
-        if ((reg->length > 64) || (reg->length == 0 && reg->reg_file_id != DW1000_LDE_CTRL))
-            continue;
-
-        // if (reg->reg_file_id != DW1000_SYS_STATUS)
-        //     continue;
-
-        if (reg->reg_file_id != DW1000_LDE_CTRL) {
-            memset(rx_buf, 0, reg->length);
-            if (dw1000_non_indexed_read(spi_cfg, reg->reg_file_id, rx_buf, reg->length))
-                goto err;
-            print_buf(rx_buf, reg->length, "Register file: 0x%02X - %s\n", reg->reg_file_id, reg->desc);
-        }
-
-        switch (reg->reg_file_id) {
-        case DW1000_DEV_ID:
-            union DW1000_REG_DEV_ID *dev_id = (void *)rx_buf;
-            printf("dev_id->value               : %08x\n", dev_id->value);
-            printf("dev_id->rev                 : %x\n", dev_id->rev);
-            printf("dev_id->ver                 : %x\n", dev_id->ver);
-            printf("dev_id->model               : %x\n", dev_id->model);
-            printf("dev_id->ridtag              : %x\n", dev_id->ridtag);
-
-            memset(rx_buf, 0, reg->length);
-            if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, 2, rx_buf, 2))
-                goto err;
-            print_buf(rx_buf, 2, NULL);
-            break;
-
-        case DW1000_EUI:
-            tx_buf[0] = 0x00;
-            tx_buf[1] = 0x00;
-            tx_buf[2] = 0x00;
-            tx_buf[3] = 0x00;
-            tx_buf[4] = 0x00;
-            tx_buf[5] = 0x3a;
-            tx_buf[6] = 0x66;
-            tx_buf[7] = 0xdc;
-            if (dw1000_non_indexed_write(spi_cfg, reg->reg_file_id, tx_buf, reg->length))
-                goto err;
-
-            memset(rx_buf, 0, reg->length);
-            if (dw1000_non_indexed_read(spi_cfg, reg->reg_file_id, rx_buf, reg->length))
-                goto err;
-
-            print_buf(rx_buf, reg->length, "%s (%02xh)\n", reg->desc, reg->reg_file_id);
-            break;
-
-        case DW1000_PANADR:
-            union DW1000_REG_PANADR *panadr = (void *)rx_buf;
-            printf("panadr->short_addr          : %x\n", panadr->short_addr);
-            printf("panadr->pan_id              : %x\n", panadr->pan_id);
-            break;
-
-        case DW1000_SYS_CFG:
-            union DW1000_REG_SYS_CFG *sys_cfg = (void *)rx_buf;
-            printf("sys_cfg->value              : %08x\n", sys_cfg->value);
-            printf("sys_cfg->ffen               : %x\n", sys_cfg->ffen);
-            printf("sys_cfg->ffbc               : %x\n", sys_cfg->ffbc);
-            printf("sys_cfg->ffab               : %x\n", sys_cfg->ffab);
-            printf("sys_cfg->ffad               : %x\n", sys_cfg->ffad);
-            printf("sys_cfg->ffaa               : %x\n", sys_cfg->ffaa);
-            printf("sys_cfg->ffam               : %x\n", sys_cfg->ffam);
-            printf("sys_cfg->ffar               : %x\n", sys_cfg->ffar);
-            printf("sys_cfg->ffa4               : %x\n", sys_cfg->ffa4);
-            printf("sys_cfg->ffa5               : %x\n", sys_cfg->ffa5);
-            printf("sys_cfg->hirq_pol           : %x\n", sys_cfg->hirq_pol);
-            printf("sys_cfg->spi_edge           : %x\n", sys_cfg->spi_edge);
-            printf("sys_cfg->dis_fce            : %x\n", sys_cfg->dis_fce);
-            printf("sys_cfg->dis_drxb           : %x\n", sys_cfg->dis_drxb);
-            printf("sys_cfg->dis_phe            : %x\n", sys_cfg->dis_phe);
-            printf("sys_cfg->dis_rsde           : %x\n", sys_cfg->dis_rsde);
-            printf("sys_cfg->fcs_init2f         : %x\n", sys_cfg->fcs_init2f);
-            printf("sys_cfg->phr_mode           : %x\n", sys_cfg->phr_mode);
-            printf("sys_cfg->dis_stxp           : %x\n", sys_cfg->dis_stxp);
-            printf("sys_cfg->rxm110k            : %x\n", sys_cfg->rxm110k);
-            printf("sys_cfg->rxwtoe             : %x\n", sys_cfg->rxwtoe);
-            printf("sys_cfg->rxautr             : %x\n", sys_cfg->rxautr);
-            printf("sys_cfg->autoack            : %x\n", sys_cfg->autoack);
-            printf("sys_cfg->aackpend           : %x\n", sys_cfg->aackpend);
-            break;
-
-        case DW1000_TX_FCTRL:
-            union DW1000_REG_TX_FCTRL *tx_fctrl = (void *)rx_buf;
-            printf("Transmit Frame Length       : %d bytes\n", tx_fctrl->ofs_00.tflen);
-            printf("tx_fctrl->ofs_00.tfle       : %x\n", tx_fctrl->ofs_00.tfle);
-            printf("tx_fctrl->ofs_00.r          : %x\n", tx_fctrl->ofs_00.r);
-            uint16_t txbr[4] = {
-                [0]  = 110,
-                [1]  = 850,
-                [2]  = 6800,
-            };
-            printf("PRF                         : %d kbps\n", txbr[tx_fctrl->ofs_00.txbr]);
-            printf("tx_fctrl->ofs_00.tr         : %x\n", tx_fctrl->ofs_00.tr);
-            printf("PRF                         : %d (%s)\n", tx_fctrl->ofs_00.txprf, prf[tx_fctrl->ofs_00.txprf]);
-            uint16_t txpsr[16] = {
-                [4]  = 64,
-                [5]  = 128,
-                [6]  = 256,
-                [7]  = 512,
-                [8]  = 1024,
-                [9]  = 1536,
-                [10] = 2048,
-                [12] = 4096,
-            };
-            printf("Preamble Length             : %d bytes\n", txpsr[tx_fctrl->ofs_00.pe << 2 | tx_fctrl->ofs_00.txpsr]);
-            printf("tx_fctrl->ofs_00.txboffs    : %x\n", tx_fctrl->ofs_00.txboffs);
-            printf("tx_fctrl->ofs_04.ifsdelay   : %x\n", tx_fctrl->ofs_04.ifsdelay);
-            break;
-
-        case DW1000_SYS_STATUS:
-            union DW1000_REG_SYS_STATUS *sys_status = (void *)rx_buf;
-            printf("sys_status->ofs_00.irqs     : %d\n", sys_status->ofs_00.irqs);
-            printf("sys_status->ofs_00.cplock   : %d\n", sys_status->ofs_00.cplock);
-            printf("sys_status->ofs_00.esyncr   : %d\n", sys_status->ofs_00.esyncr);
-            printf("sys_status->ofs_00.aat      : %d\n", sys_status->ofs_00.aat);
-            printf("sys_status->ofs_00.txfrb    : %d\n", sys_status->ofs_00.txfrb);
-            printf("sys_status->ofs_00.txprs    : %d\n", sys_status->ofs_00.txprs);
-            printf("sys_status->ofs_00.txphs    : %d\n", sys_status->ofs_00.txphs);
-            printf("sys_status->ofs_00.txfrs    : %d\n", sys_status->ofs_00.txfrs);
-            //
-            printf("sys_status->ofs_00.rxdfr    : %d\n", sys_status->ofs_00.rxdfr);
-            printf("sys_status->ofs_00.rxsfdd   : %d\n", sys_status->ofs_00.rxsfdd);
-            printf("sys_status->ofs_00.ldedone  : %d\n", sys_status->ofs_00.ldedone);
-            printf("sys_status->ofs_00.rxphd    : %d\n", sys_status->ofs_00.rxphd);
-            printf("sys_status->ofs_00.rxphe    : %d\n", sys_status->ofs_00.rxphe);
-            printf("sys_status->ofs_00.rxdfr    : %d\n", sys_status->ofs_00.rxdfr);
-            printf("sys_status->ofs_00.rxfcg    : %d\n", sys_status->ofs_00.rxfcg);
-            printf("sys_status->ofs_00.rxfce    : %d\n", sys_status->ofs_00.rxfce);
-            //
-            printf("sys_status->ofs_00.rxrfsl   : %d\n", sys_status->ofs_00.rxrfsl);
-            printf("sys_status->ofs_00.rxrfto   : %d\n", sys_status->ofs_00.rxrfto);
-            printf("sys_status->ofs_00.ldeerr   : %d\n", sys_status->ofs_00.ldeerr);
-            printf("sys_status->ofs_00.rsvd     : %d\n", sys_status->ofs_00.rsvd);
-            printf("sys_status->ofs_00.rxovrr   : %d\n", sys_status->ofs_00.rxovrr);
-            printf("sys_status->ofs_00.rxpto    : %d\n", sys_status->ofs_00.rxpto);
-            printf("sys_status->ofs_00.gpioirq  : %d\n", sys_status->ofs_00.gpioirq);
-            printf("sys_status->ofs_00.slp2init : %d\n", sys_status->ofs_00.slp2init);
-            //
-            printf("sys_status->ofs_00.rfpll_ll : %d\n", sys_status->ofs_00.rfpll_ll);
-            printf("sys_status->ofs_00.clkpll_ll: %d\n", sys_status->ofs_00.clkpll_ll);
-            printf("sys_status->ofs_00.rxsfdto  : %d\n", sys_status->ofs_00.rxsfdto);
-            printf("sys_status->ofs_00.hpdwarn  : %d\n", sys_status->ofs_00.hpdwarn);
-            printf("sys_status->ofs_00.txberr   : %d\n", sys_status->ofs_00.txberr);
-            printf("sys_status->ofs_00.affrej   : %d\n", sys_status->ofs_00.affrej);
-            printf("sys_status->ofs_00.hsrbp    : %d\n", sys_status->ofs_00.hsrbp);
-            printf("sys_status->ofs_00.icrbp    : %d\n", sys_status->ofs_00.icrbp);
-            //
-            printf("sys_status->ofs_04.affrej   : %d\n", sys_status->ofs_04.rxrscs);
-            printf("sys_status->ofs_04.hsrbp    : %d\n", sys_status->ofs_04.rxprej);
-            printf("sys_status->ofs_04.icrbp    : %d\n", sys_status->ofs_04.txpute);
-            printf("sys_status->ofs_04.rsvd     : %d\n", sys_status->ofs_04.rsvd);
-            sys_status->ofs_00.value = 0xFFFFFFFF;
-            sys_status->ofs_04.value = 0xFF;;
-            if (dw1000_non_indexed_write(spi_cfg, reg->reg_file_id, sys_status, sizeof(*sys_status)))
-                goto err;
-
-            break;
-
-        case DW1000_CHAN_CTRL:
-            union DW1000_REG_CHAN_CTRL *chan_ctrl = (void *)rx_buf;
-            printf("chan_ctrl->tx_chan          : %d\n", chan_ctrl->tx_chan);
-            printf("chan_ctrl->rx_chan          : %d\n", chan_ctrl->rx_chan);
-            printf("chan_ctrl->rsvd             : %d\n", chan_ctrl->rsvd);
-            printf("chan_ctrl->dwsfd            : %d\n", chan_ctrl->dwsfd);
-            printf("chan_ctrl->rxprf            : %d (%s)\n", chan_ctrl->rxprf, prf[chan_ctrl->rxprf]);
-            printf("chan_ctrl->tnssfd           : %d\n", chan_ctrl->tnssfd);
-            printf("chan_ctrl->rnssfd           : %d\n", chan_ctrl->rnssfd);
-            const char *pcode[] = {
-                [1 ... 8]   = "For 16 MHz PRF",
-                [9 ... 12]  = "For 64 MHz PRF",
-                [17 ... 20] = "For 64 MHz PRF",
-                [13 ... 16] = "For 64 MHz PRF (DPS)",
-                [21 ... 24] = "For 64 MHz PRF (DPS)",
-            };
-            printf("chan_ctrl->tx_pcode         : %d (%s)\n", chan_ctrl->tx_pcode, pcode[chan_ctrl->tx_pcode]);
-            printf("chan_ctrl->rx_pcode         : %d (%s)\n", chan_ctrl->rx_pcode, pcode[chan_ctrl->rx_pcode]);
-            break;
-
-        case DW1000_AGC_CTRL:
-            for (struct dw1000_reg *sub_reg = dw1000_agc_ctrl_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
-                if ((sub_reg->length > 64) || (sub_reg->length == 0))
-                    continue;
-
-                memset(rx_buf, 0, sub_reg->length);
-                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
-                    goto err;
-
-                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
-            }
-            break;
-
-        case DW1000_DRX_CONF:
-            for (struct dw1000_reg *sub_reg = dw1000_drx_conf_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
-                if ((sub_reg->length > 64) || (sub_reg->length == 0))
-                    continue;
-
-                memset(rx_buf, 0, sub_reg->length);
-                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
-                    goto err;
-
-                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
-            }
-            break;
-
-        case DW1000_RF_CONF:
-            for (struct dw1000_reg *sub_reg = dw1000_rf_conf_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
-                if ((sub_reg->length > 64) || (sub_reg->length == 0))
-                    continue;
-
-                memset(rx_buf, 0, sub_reg->length);
-                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
-                    goto err;
-
-                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
-            }
-            break;
-
-        case DW1000_FS_CTRL:
-            for (struct dw1000_reg *sub_reg = dw1000_fs_ctrl_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
-                if ((sub_reg->length > 64) || (sub_reg->length == 0))
-                    continue;
-
-                memset(rx_buf, 0, sub_reg->length);
-                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
-                    goto err;
-
-                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
-            }
-            break;
-
-        case DW1000_AON:
-            for (struct dw1000_reg *sub_reg = dw1000_aon_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
-                if ((sub_reg->length > 64) || (sub_reg->length == 0))
-                    continue;
-
-                memset(rx_buf, 0, sub_reg->length);
-                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
-                    goto err;
-
-                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
-
-                switch (sub_reg->reg_file_id) {
-                case DW1000_AON_CFG0:
-                    union DW1000_SUB_REG_AON_CFG0 *aon_cfg0 = (void *)rx_buf;
-                    printf("aon_cfg0->sleep_en          : %d\n", aon_cfg0->sleep_en);
-                    printf("aon_cfg0->wake_pin          : %d\n", aon_cfg0->wake_pin);
-                    printf("aon_cfg0->wake_spi          : %d\n", aon_cfg0->wake_spi);
-                    printf("aon_cfg0->wake_cnt          : %d\n", aon_cfg0->wake_cnt);
-                    printf("aon_cfg0->lpdiv_en          : %d\n", aon_cfg0->lpdiv_en);
-                    printf("aon_cfg0->lpclkdiva         : %d\n", aon_cfg0->lpclkdiva);
-                    printf("aon_cfg0->sleep_tim         : %d\n", aon_cfg0->sleep_tim);
-                    break;
-                }
-            }
-            break;
-
-        case DW1000_OTP_IF:
-            for (struct dw1000_reg *sub_reg = dw1000_otp_if_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
-                if ((sub_reg->length > 64) || (sub_reg->length == 0))
-                    continue;
-
-                memset(rx_buf, 0, sub_reg->length);
-                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
-                    goto err;
-
-                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
-            }
-            break;
-
-        case DW1000_LDE_CTRL:
-            for (struct dw1000_reg *sub_reg = dw1000_lde_ctrl_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
-                if ((sub_reg->length > 64) || (sub_reg->length == 0))
-                    continue;
-
-                memset(rx_buf, 0, sub_reg->length);
-                if (dw1000_long_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
-                    goto err;
-
-                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
-            }
-            break;
-
-        case DW1000_DIG_DIAG:
-            for (struct dw1000_reg *sub_reg = dw1000_dig_diag_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
-                if ((sub_reg->length > 64) || (sub_reg->length == 0))
-                    continue;
-
-                memset(rx_buf, 0, sub_reg->length);
-                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
-                    goto err;
-
-                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
-
-                switch (sub_reg->reg_file_id) {
-                case DW1000_EVC_CTRL:
-                    union DW1000_SUB_REG_EVC_CTRL *evc_ctrl = (void *)rx_buf;
-                    printf("evc_ctrl->evc_en            : %d\n", evc_ctrl->evc_en);
-                    printf("evc_ctrl->evc_clr           : %d\n", evc_ctrl->evc_clr);
-                    break;
-
-                case DW1000_DIG_DIAG:
-                    union DW1000_SUB_REG_DIAG_TMC *diag_tmc = (void *)rx_buf;
-                    printf("diag_tmc->tx_pstm           : %d\n", diag_tmc->tx_pstm);
-                    break;
-                }
-            }
-            break;
-
-        case DW1000_PMSC:
-            for (struct dw1000_reg *sub_reg = dw1000_pmsc_sub_regs; sub_reg->mnemonic != NULL; sub_reg++) {
-                if ((sub_reg->length > 64) || (sub_reg->length == 0))
-                    continue;
-
-                memset(rx_buf, 0, sub_reg->length);
-                if (dw1000_short_indexed_read(spi_cfg, reg->reg_file_id, sub_reg->reg_file_id, rx_buf, sub_reg->length))
-                    goto err;
-
-                print_buf(rx_buf, sub_reg->length, "Sub-Register 0x%02X:%02X - %s\n", reg->reg_file_id, sub_reg->reg_file_id, sub_reg->desc);
-            }
-            break;
-        };
-    }
-
-    return 0;
-err:
-    return -1;
-}
-
 void dw1000_spi_master_test(struct dw1000_context *dw1000_ctx)
 {
     printf("%s\n", __func__);
@@ -1669,8 +1681,8 @@ void dw1000_spi_master_test(struct dw1000_context *dw1000_ctx)
     // static bool led_out = 0;
     // for (size_t i = 0; ; ++i) {
     //     printf("Transaction #%d\n", i);
-    //     if (dw1000_dump_all_regs(spi_cfg))
-    //         goto err;
+        if (dw1000_dump_all_regs(spi_cfg))
+            goto err;
 
     //     pico_set_led(led_out);
     //     led_out = !led_out;
