@@ -2393,7 +2393,7 @@ union dw1000_tran_header3
 
 
 //! IEEE 802.15.4e standard blink. It is a 12-byte frame composed of the following fields.
-union ieee_blink_frame_t
+union ieee_blink_frame
 {
 //! Structure of IEEE blink frame
     struct
@@ -2409,7 +2409,7 @@ union ieee_blink_frame_t
     // uint8_t array[10]; //!< Array of size blink frame
 };
 
-_Static_assert(sizeof(union ieee_blink_frame_t) == 10, "union ieee_blink_frame_t must be 10 bytes");
+_Static_assert(sizeof(union ieee_blink_frame) == 10, "union ieee_blink_frame must be 10 bytes");
 
 /**
  * This frame type field is a 3-bit field that indicates the type of frame.
@@ -2451,7 +2451,7 @@ enum ieee_802_15_4_src_addr_mode
 /**
  * The frame control field in the MAC header
  */
-union ieee_802_15_4_mac_fctrl_t
+union ieee_802_15_4_mac_fctrl
 {
     struct
     {
@@ -2469,7 +2469,7 @@ union ieee_802_15_4_mac_fctrl_t
 };
 
 //! IEEE 802.15.4 standard ranging frames
-union ieee_rng_request_frame_t
+union ieee_rng_req_frame
 {
 //! Structure of range request frame
     struct
@@ -2484,9 +2484,9 @@ union ieee_rng_request_frame_t
     // uint8_t array[10];  //!< Array of size range request frame
 };
 
-_Static_assert(sizeof(union ieee_rng_request_frame_t) == 10, "union ieee_rng_request_frame_t must be 10 bytes");
+_Static_assert(sizeof(union ieee_rng_req_frame) == 10, "union ieee_rng_req_frame must be 10 bytes");
 
-union dw1000_rng_init_msg_t
+union dw1000_rng_init_msg
 {
 //! Structure of range request frame
     struct
@@ -2502,7 +2502,9 @@ union dw1000_rng_init_msg_t
     };
 };
 
-union dw1000_poll_msg_t
+_Static_assert(sizeof(union dw1000_rng_init_msg) == 14, "union dw1000_rng_init_msg must be 14 bytes");
+
+union dw1000_poll_msg
 {
 //! Structure of range request frame
     struct
@@ -2516,7 +2518,9 @@ union dw1000_poll_msg_t
     };
 };
 
-union dw1000_resp_msg_t
+_Static_assert(sizeof(union dw1000_poll_msg) == 10, "union dw1000_poll_msg must be 10 bytes");
+
+union dw1000_resp_msg
 {
 //! Structure of range request frame
     struct
@@ -2531,7 +2535,9 @@ union dw1000_resp_msg_t
     };
 };
 
-union dw1000_final_msg_t
+_Static_assert(sizeof(union dw1000_resp_msg) == 14, "union dw1000_resp_msg must be 14 bytes");
+
+union dw1000_final_msg
 {
 //! Structure of range request frame
     struct
@@ -2546,6 +2552,8 @@ union dw1000_final_msg_t
         uint32_t t2;                    //!< Final TX time – Resp RX time
     };
 };
+
+_Static_assert(sizeof(union dw1000_final_msg) == 18, "union dw1000_final_msg must be 18 bytes");
 
 #pragma pop
 
