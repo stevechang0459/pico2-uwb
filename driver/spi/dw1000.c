@@ -1816,21 +1816,17 @@ err:
  */
 int dw1000_transmit_message(void *buf, size_t len, bool wait4resp)
 {
-    if ((buf == NULL) || ((len + 2) > m_dw1000_ctx.tx_fctrl.ofs_00.tflen)) {
-        printf("invalid transmission lengh:%zu,%d\n", len, m_dw1000_ctx.tx_fctrl.ofs_00.tflen);
+    if (buf == NULL || len == 0)
         goto err;
-    }
 
     const struct spi_config *spi_cfg = &m_dw1000_ctx.spi_cfg;
+    union DW1000_REG_TX_FCTRL *tx_fctrl = &m_dw1000_ctx.tx_fctrl;
+    len = len + 2;
+    m_dw1000_ctx.tx_fctrl.ofs_00.tflen = (len & 0x7F);
+    if (m_dw1000_ctx.sys_cfg.phr_mode == DW1000_SYS_CFG_PHR_LONG_FRAME)
+        m_dw1000_ctx.tx_fctrl.ofs_00.tfle = (len >> 7) & 0x3;
 
-    // print_buf(m_dw1000_ctx.tx_fctrl, sizeof(m_dw1000_ctx.tx_fctrl), "DW1000_TX_FCTRL 1\n");
-    // uint8_t _tx_fctrl[5];
-    // if (dw1000_non_indexed_read(spi_cfg, DW1000_TX_FCTRL, _tx_fctrl, sizeof(_tx_fctrl), NULL))
-    //     goto err;
-    // print_buf(_tx_fctrl, sizeof(*tx_fctrl), "DW1000_TX_FCTRL 2\n");
-
-    if (dw1000_clear_sys_status_ofs_00_by_mask(spi_cfg, DW1000_SYS_STS_TXFRB |
-        DW1000_SYS_STS_TXPRS | DW1000_SYS_STS_TXPHS | DW1000_SYS_STS_TXFRS))
+    if (dw1000_non_indexed_write(spi_cfg, DW1000_TX_FCTRL, &m_dw1000_ctx.tx_fctrl, sizeof(m_dw1000_ctx.tx_fctrl), NULL))
         goto err;
 
     if (dw1000_prepare_tx_buffer(spi_cfg, buf, len))

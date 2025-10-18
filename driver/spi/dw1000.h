@@ -534,6 +534,12 @@ union DW1000_REG_SYS_CFG
     uint32_t value;
 };
 
+enum dw1000_sys_cfg_phr_mode
+{
+    DW1000_SYS_CFG_PHR_STD_FRAME = 0x0,
+    DW1000_SYS_CFG_PHR_LONG_FRAME = 0x3
+};
+
 _Static_assert(sizeof(union DW1000_REG_SYS_CFG) == 4, "union DW1000_REG_SYS_CFG must be 4 bytes");
 
 // Register file: 0x05 - Reserved
