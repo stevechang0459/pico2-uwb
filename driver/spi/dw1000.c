@@ -615,16 +615,16 @@ int dw1000_dump_all_regs(const struct spi_config *spi_cfg)
             printf("tx_fctrl->ofs_00.tr         : %x\n", tx_fctrl->ofs_00.tr);
             printf("PRF                         : %d (%s)\n", tx_fctrl->ofs_00.txprf, prf[tx_fctrl->ofs_00.txprf]);
             uint16_t txpsr[16] = {
-                [4]  = 64,
-                [5]  = 128,
-                [6]  = 256,
-                [7]  = 512,
-                [8]  = 1024,
-                [9]  = 1536,
-                [10] = 2048,
-                [12] = 4096,
+                [0x1] = 64,
+                [0x2] = 1024,
+                [0x3] = 4096,
+                [0x5] = 128,
+                [0x9] = 256,
+                [0xd] = 512,
+                [0x6] = 1536,
+                [0xa] = 2048,
             };
-            printf("Preamble Length             : %d bytes\n", txpsr[tx_fctrl->ofs_00.pe << 2 | tx_fctrl->ofs_00.txpsr]);
+            printf("Preamble Length             : %d bytes\n", txpsr[(tx_fctrl->ofs_00.pe << 2) | tx_fctrl->ofs_00.txpsr]);
             printf("tx_fctrl->ofs_00.txboffs    : %x\n", tx_fctrl->ofs_00.txboffs);
             printf("tx_fctrl->ofs_04.ifsdelay   : %x\n", tx_fctrl->ofs_04.ifsdelay);
             break;
