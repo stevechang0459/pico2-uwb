@@ -1852,7 +1852,7 @@ void dw1000_isr()
     if (dw1000_non_indexed_read(spi_cfg, DW1000_SYS_STATUS, sys_status, sizeof(*sys_status), NULL))
         goto err;
 
-    if (m_dw1000_ctx.ads_twr_state != DW1000_ADS_TWR_STATE_LISTEN)
+    if (m_dw1000_ctx.twr_state != DW1000_DS_TWR_STATE_LISTEN)
     {
         m_dw1000_ctx.listen_to = false;
         print_buf(sys_status, sizeof(*sys_status), "\nisr: ");
@@ -1885,7 +1885,7 @@ void dw1000_isr()
     }
     else if (sys_status->ofs_00.value & DW1000_SYS_STS_RXRFTO)
     {
-        if (m_dw1000_ctx.ads_twr_state != DW1000_ADS_TWR_STATE_LISTEN)
+        if (m_dw1000_ctx.twr_state != DW1000_DS_TWR_STATE_LISTEN)
         {
             printf("rxrfto\n");
         }
@@ -2038,13 +2038,13 @@ void dw1000_unit_test()
         goto err;
 
 #if (CONFIG_DW1000_ANCHOR)
-    m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_RX_INIT;
+    m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
     while (1) {
         volatile union DW1000_REG_SYS_STATUS *sys_status = &m_dw1000_ctx.sys_status;
-        switch (m_dw1000_ctx.ads_twr_state) {
-        case DW1000_ADS_TWR_STATE_RX_INIT:
+        switch (m_dw1000_ctx.twr_state) {
+        case DW1000_DS_TWR_STATE_RX_INIT:
         {
-            m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_LISTEN;
+            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_LISTEN;
             if (m_dw1000_ctx.listen_to)
                 m_dw1000_ctx.listen_to = 0;
             else
@@ -2055,7 +2055,7 @@ void dw1000_unit_test()
             break;
         }
         // Discovery phase
-        case DW1000_ADS_TWR_STATE_LISTEN:
+        case DW1000_DS_TWR_STATE_LISTEN:
         {
             if (sys_status->ofs_00.rxfcg) {
                 sys_status->ofs_00.value = 0;
@@ -2073,20 +2073,20 @@ void dw1000_unit_test()
                 if (rx_frame->fctrl == IEEE_802_15_4_BLINK_CCP_64) {
                     m_dw1000_ctx.tar_addr = rx_frame->long_address;
                     m_dw1000_ctx.seq_num  = rx_frame->seq_num;
-                    m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_RANGING_INIT;
+                    m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RANGING_INIT;
                     printf("-> ranging init %d\n", m_dw1000_ctx.seq_num);
                 } else {
                     printf("@@ invalid blink\n");
-                    m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_RX_INIT;
+                    m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
                 }
             } else if (sys_status->ofs_00.rxrfto) {
                 sys_status->ofs_00.value = 0;
-                m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_RX_INIT;
+                m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
             }
             break;
         }
         // Ranging phase
-        case DW1000_ADS_TWR_STATE_RANGING_INIT:
+        case DW1000_DS_TWR_STATE_RANGING_INIT:
         {
             union dw1000_rng_init_msg *tx_frame = (void *)m_dw1000_ctx.tx_buf;
             tx_frame->fctrl    = IEEE_802_15_4_FCTRL_RANGE_16;
@@ -2097,11 +2097,11 @@ void dw1000_unit_test()
             tx_frame->code     = DW1000_TWR_CODE_RNG_INIT;
 
             printf("-> poll wait %d\n", m_dw1000_ctx.seq_num);
-            m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_POLL_WAIT;
+            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_POLL_WAIT;
             dw1000_transmit_message(tx_frame, sizeof(*tx_frame), true);
             break;
         }
-        case DW1000_ADS_TWR_STATE_POLL_WAIT:
+        case DW1000_DS_TWR_STATE_POLL_WAIT:
         {
             if (sys_status->ofs_00.rxfcg) {
                 sys_status->ofs_00.value = 0;
@@ -2122,21 +2122,21 @@ void dw1000_unit_test()
                     (rx_frame->dst_addr == m_dw1000_ctx.my_addr)) {
                     m_dw1000_ctx.tar_addr = rx_frame->src_addr;
                     m_dw1000_ctx.seq_num  = rx_frame->seq_num;
-                    m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_RESPONSE;
+                    m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RESPONSE;
                 } else {
                     printf("@@ err %d,(%d,%d),%d,%d\n", (rx_frame->fctrl == IEEE_802_15_4_FCTRL_RANGE_16),
                         (m_dw1000_ctx.seq_num + 1), rx_frame->seq_num,
                         (rx_frame->code == DW1000_TWR_CODE_POLL),
                         (rx_frame->dst_addr == m_dw1000_ctx.my_addr));
-                    m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_RX_INIT;
+                    m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
                 }
             } else if (sys_status->ofs_00.rxrfto) {
                 sys_status->ofs_00.value = 0;
-                m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_RX_INIT;
+                m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
             }
             break;
         }
-        case DW1000_ADS_TWR_STATE_RESPONSE:
+        case DW1000_DS_TWR_STATE_RESPONSE:
         {
             union dw1000_resp_msg *tx_frame = (void *)m_dw1000_ctx.tx_buf;
             tx_frame->fctrl    = IEEE_802_15_4_FCTRL_RANGE_16;
@@ -2147,11 +2147,11 @@ void dw1000_unit_test()
             tx_frame->code     = DW1000_TWR_CODE_RESP;
 
             printf("-> final wait %d\n", m_dw1000_ctx.seq_num);
-            m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_FINAL_WAIT;
+            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_FINAL_WAIT;
             dw1000_transmit_message(tx_frame, sizeof(*tx_frame), true);
             break;
         }
-        case DW1000_ADS_TWR_STATE_FINAL_WAIT:
+        case DW1000_DS_TWR_STATE_FINAL_WAIT:
         {
             if (sys_status->ofs_00.rxfcg) {
                 sys_status->ofs_00.value = 0;
@@ -2172,18 +2172,18 @@ void dw1000_unit_test()
                     (rx_frame->dst_addr == m_dw1000_ctx.my_addr)) {
                     m_dw1000_ctx.tar_addr = rx_frame->src_addr;
                     m_dw1000_ctx.seq_num  = rx_frame->seq_num;
-                    m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_RX_INIT;
+                    m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
                     printf("@@ final cmpl\n");
                 } else {
                     printf("@@ err %d,(%d,%d),%d,%d\n", (rx_frame->fctrl == IEEE_802_15_4_FCTRL_RANGE_16),
                         (m_dw1000_ctx.seq_num + 1), rx_frame->seq_num,
                         (rx_frame->code == DW1000_TWR_CODE_FINAL),
                         (rx_frame->dst_addr == m_dw1000_ctx.my_addr));
-                    m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_RX_INIT;
+                    m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
                 }
             } else if (sys_status->ofs_00.rxrfto) {
                 sys_status->ofs_00.value = 0;
-                m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_RX_INIT;
+                m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
             }
             break;
         }
@@ -2194,19 +2194,19 @@ void dw1000_unit_test()
 #endif
 
 #if (CONFIG_DW1000_TAG)
-    m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_TX_INIT;
+    m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_TX_INIT;
     while (1) {
         volatile union DW1000_REG_SYS_STATUS *sys_status = &m_dw1000_ctx.sys_status;
-        switch (m_dw1000_ctx.ads_twr_state) {
-        case DW1000_ADS_TWR_STATE_TX_INIT:
+        switch (m_dw1000_ctx.twr_state) {
+        case DW1000_DS_TWR_STATE_TX_INIT:
         {
             sleep_ms(1000);
             printf("-> blink %d\n", m_dw1000_ctx.seq_num);
-            m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_BLINK;
+            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_BLINK;
             break;
         }
         // Discovery phase
-        case DW1000_ADS_TWR_STATE_BLINK:
+        case DW1000_DS_TWR_STATE_BLINK:
         {
             union ieee_blink_frame *tx_frame = (void *)m_dw1000_ctx.tx_buf;
             tx_frame->fctrl        = IEEE_802_15_4_BLINK_CCP_64;
@@ -2214,11 +2214,11 @@ void dw1000_unit_test()
             tx_frame->long_address = m_dw1000_ctx.my_addr;
 
             printf("-> init wait %d\n", m_dw1000_ctx.seq_num);
-            m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_INIT_WAIT;
+            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_INIT_WAIT;
             dw1000_transmit_message(tx_frame, sizeof(*tx_frame), true);
             break;
         }
-        case DW1000_ADS_TWR_STATE_INIT_WAIT:
+        case DW1000_DS_TWR_STATE_INIT_WAIT:
         {
             if (sys_status->ofs_00.rxfcg) {
                 sys_status->ofs_00.value = 0;
@@ -2240,22 +2240,22 @@ void dw1000_unit_test()
                     m_dw1000_ctx.tar_addr = rx_frame->src_addr;
                     m_dw1000_ctx.seq_num  = rx_frame->seq_num;
                     printf("-> poll %d\n", m_dw1000_ctx.seq_num);
-                    m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_POLL;
+                    m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_POLL;
                 } else {
                     printf("@@ err %d,(%d,%d),%d,%d\n", (rx_frame->fctrl == IEEE_802_15_4_FCTRL_RANGE_16),
                         (m_dw1000_ctx.seq_num + 1), rx_frame->seq_num,
                         (rx_frame->code == DW1000_TWR_CODE_RNG_INIT),
                         (rx_frame->dst_addr == m_dw1000_ctx.my_addr));
-                    m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_TX_INIT;
+                    m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_TX_INIT;
                 }
             } else if (sys_status->ofs_00.rxrfto) {
                 sys_status->ofs_00.value = 0;
-                m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_TX_INIT;
+                m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_TX_INIT;
             }
             break;
         }
         // Ranging phase
-        case DW1000_ADS_TWR_STATE_POLL:
+        case DW1000_DS_TWR_STATE_POLL:
         {
             union dw1000_poll_msg *tx_frame = (void *)m_dw1000_ctx.tx_buf;
             tx_frame->fctrl    = IEEE_802_15_4_FCTRL_RANGE_16;
@@ -2266,11 +2266,11 @@ void dw1000_unit_test()
             tx_frame->code     = DW1000_TWR_CODE_POLL;
 
             printf("-> response wait %d\n", m_dw1000_ctx.seq_num);
-            m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_RESPONSE_WAIT;
+            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RESPONSE_WAIT;
             dw1000_transmit_message(tx_frame, sizeof(*tx_frame), true);
             break;
         }
-        case DW1000_ADS_TWR_STATE_RESPONSE_WAIT:
+        case DW1000_DS_TWR_STATE_RESPONSE_WAIT:
         {
             if (sys_status->ofs_00.rxfcg) {
                 sys_status->ofs_00.value = 0;
@@ -2292,21 +2292,21 @@ void dw1000_unit_test()
                     m_dw1000_ctx.tar_addr = rx_frame->src_addr;
                     m_dw1000_ctx.seq_num  = rx_frame->seq_num;
                     printf("-> final %d\n", m_dw1000_ctx.seq_num);
-                    m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_FINAL;
+                    m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_FINAL;
                 } else {
                     printf("@@ err %d,(%d,%d),%d,%d\n", (rx_frame->fctrl == IEEE_802_15_4_FCTRL_RANGE_16),
                         (m_dw1000_ctx.seq_num + 1), rx_frame->seq_num,
                         (rx_frame->code == DW1000_TWR_CODE_RESP),
                         (rx_frame->dst_addr == m_dw1000_ctx.my_addr));
-                    m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_TX_INIT;
+                    m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_TX_INIT;
                 }
             } else if (sys_status->ofs_00.rxrfto) {
                 sys_status->ofs_00.value = 0;
-                m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_TX_INIT;
+                m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_TX_INIT;
             }
             break;
         }
-        case DW1000_ADS_TWR_STATE_FINAL:
+        case DW1000_DS_TWR_STATE_FINAL:
         {
             union dw1000_final_msg *tx_frame = (void *)m_dw1000_ctx.tx_buf;
             tx_frame->fctrl    = IEEE_802_15_4_FCTRL_RANGE_16;
@@ -2317,7 +2317,7 @@ void dw1000_unit_test()
             tx_frame->code     = DW1000_TWR_CODE_FINAL;
 
             printf("@@ final\n");
-            m_dw1000_ctx.ads_twr_state = DW1000_ADS_TWR_STATE_TX_INIT;
+            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_TX_INIT;
             dw1000_transmit_message(tx_frame, sizeof(*tx_frame), false);
             break;
         }
