@@ -1868,6 +1868,9 @@ void dw1000_isr()
 
     if (sys_status->ofs_00.value & (DW1000_SYS_STS_RXFCG | DW1000_SYS_STS_RXDFR))
     {
+        pico_set_led(led_out);
+        led_out = !led_out;
+
         // printf("rxf:%d-%d-(%d,%d)-%d-%d-(%d,%d)\n",
         //     sys_status->ofs_00.rxprd, sys_status->ofs_00.rxsfdd, sys_status->ofs_00.rxphd, sys_status->ofs_00.rxphe,
         //     sys_status->ofs_00.ldedone, sys_status->ofs_00.rxdfr,sys_status->ofs_00.rxfcg, sys_status->ofs_00.rxfce);
@@ -1925,8 +1928,8 @@ void dw1000_isr()
     #endif
     }
 
-    pico_set_led(led_out);
-    led_out = !led_out;
+    // pico_set_led(led_out);
+    // led_out = !led_out;
 
     if (dw1000_clear_sys_status(spi_cfg))
         goto err;
