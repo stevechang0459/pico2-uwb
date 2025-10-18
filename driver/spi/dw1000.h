@@ -2590,7 +2590,7 @@ struct dw1000_context
     union DW1000_SUB_REG_PMSC_CTRL0 pmsc_ctrl0;
     union DW1000_SUB_REG_EC_CTRL ec_ctrl;
     //
-    struct dw1000_trx_para trx_cfg;
+    enum dw1000_ads_state ads_twr_state;
     uint16_t tar_addr;
     uint16_t my_addr;
     uint8_t seq_num;
