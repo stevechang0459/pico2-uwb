@@ -1208,8 +1208,8 @@ int dw1000_init()
      * ************************************************************************/
 
     union DW1000_REG_CHAN_CTRL *chan_ctrl = &m_dw1000_ctx.chan_ctrl;
-    chan_ctrl->tx_chan  = DW1000_CHAN_5;
-    chan_ctrl->rx_chan  = DW1000_CHAN_5;
+    chan_ctrl->tx_chan  = DW1000_CHAN;
+    chan_ctrl->rx_chan  = DW1000_CHAN;
     chan_ctrl->rxprf    = DW1000_PRF;
     chan_ctrl->tx_pcode = DW1000_PCODE;
     chan_ctrl->rx_pcode = DW1000_PCODE;

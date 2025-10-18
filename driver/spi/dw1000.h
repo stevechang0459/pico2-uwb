@@ -445,10 +445,18 @@ enum dw1000_ads_state
 // #define DW1000_PCODE                    (DW1000_PCODE_5)
 // #define DW1000_PRF                      (DW1000_PRF_16MHZ)
 // #define DW1000_PSR                      (DW1000_PSR_4096)
-#define DW1000_BR                       (DW1000_BR_6800KBPS)
+
+#define DW1000_CHAN                     (DW1000_CHAN_5)
+#define DW1000_BR                       (DW1000_BR_850KBPS)
 #define DW1000_PCODE                    (DW1000_PCODE_9)
 #define DW1000_PRF                      (DW1000_PRF_64MHZ)
-#define DW1000_PSR                      (DW1000_PSR_128)
+#define DW1000_PSR                      (DW1000_PSR_1024)
+
+// #define DW1000_CHAN                     (DW1000_CHAN_5)
+// #define DW1000_BR                       (DW1000_BR_6800KBPS)
+// #define DW1000_PCODE                    (DW1000_PCODE_9)
+// #define DW1000_PRF                      (DW1000_PRF_64MHZ)
+// #define DW1000_PSR                      (DW1000_PSR_256)
 
 #pragma push
 #pragma pack(1)
