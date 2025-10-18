@@ -848,39 +848,6 @@ err:
     return -1;
 }
 
-// int dw1000_set_tx_parameters()
-// {
-//     const struct spi_config *spi_cfg = &m_dw1000_ctx.spi_cfg;
-//     const struct dw1000_trx_para *trx_cfg = &m_dw1000_ctx.trx_cfg;
-
-//     union DW1000_REG_TX_FCTRL tx_fctrl = {
-//         .ofs_00.tflen    = trx_cfg->tflen & 0x7f,
-//         .ofs_00.txbr     = trx_cfg->txbr_sel,
-//         .ofs_00.txprf    = trx_cfg->txprf_sel,
-//         .ofs_00.txpsr    = trx_cfg->txpsr_sel & 0x3,
-//         // .ofs_00.tfle     = (trx_cfg->tflen >> 7) & 0x7,
-//         // .ofs_00.pe       = (trx_cfg->txpsr_sel >> 2) & 0x3,
-//         // .ofs_00.txboffs  = trx_cfg->buf_ofs & 0x3ff,
-//         // .ofs_04.ifsdelay = trx_cfg->ifs_delay,
-//     };
-//     if (dw1000_non_indexed_write(spi_cfg, DW1000_TX_FCTRL, &tx_fctrl, sizeof(tx_fctrl), NULL))
-//         goto err;
-
-//     if (trx_cfg->txdlys) {
-//         union DW1000_REG_DX_TIME dx_time = {
-//             .dx_time_l = (uint32_t)(trx_cfg->txdlys),
-//             .dx_time_h = (trx_cfg->txdlys >> 32) & 0xFF,
-//         };
-//         if (dw1000_non_indexed_write(spi_cfg, DW1000_DX_TIME, &dx_time, sizeof(dx_time), NULL))
-//             goto err;
-//     }
-
-//     return 0;
-// err:
-//     printf("%s failed\n", __func__);
-//     return -1;
-// }
-
 /**
  * @brief Perform a hardware reset on the DW1000 transceiver.
  *
@@ -1786,50 +1753,6 @@ int dw1000_set_rx_buf_ptr(const struct spi_config *spi_cfg)
     union DW1000_REG_SYS_CTRL sys_ctrl = {
         sys_ctrl.hrbpt = 1
     };
-    if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CTRL, &sys_ctrl, sizeof(sys_ctrl), NULL))
-        goto err;
-
-    return 0;
-err:
-    printf("%s failed\n", __func__);
-    return -1;
-}
-
-int dw1000_set_rx_parameters(const struct spi_config *spi_cfg, struct dw1000_trx_para *trx_cfg)
-{
-    // if (trx_cfg->rxdlye) {
-    //     union DW1000_REG_DX_TIME dx_time = {
-    //         .dx_time_l = (uint32_t)(trx_cfg->rxdlye),
-    //         .dx_time_h = (trx_cfg->rxdlye >> 32) & 0xFF,
-    //     };
-    //     if (dw1000_non_indexed_write(spi_cfg, DW1000_DX_TIME, &dx_time, sizeof(dx_time), NULL))
-    //         goto err;
-    // }
-
-    // union DW1000_SUB_REG_DRX_TUNE2 drx_tune2 = {
-    //     .value = trx_cfg->drx_tune2,
-    // };
-    // if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_TUNE2, &drx_tune2, sizeof(drx_tune2), NULL))
-    //     goto err;
-
-    // union DW1000_SUB_REG_DRX_PRETOC drx_pretoc = {
-    //     .value = trx_cfg->drx_pretoc,
-    // };
-    // if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_PRETOC, &drx_pretoc, sizeof(drx_pretoc), NULL))
-    //     goto err;
-
-    union DW1000_REG_SYS_CTRL sys_ctrl = {0};
-    // sys_ctrl.sfcst = 0;
-    // sys_ctrl.txstrt = 1;
-    // if (trx_cfg->txdlys)
-    //     sys_ctrl.txdlys = 1;
-    sys_ctrl.rxenab = 1;
-    if (trx_cfg->rxdlye)
-        sys_ctrl.rxdlye = 1;
-    // sys_ctrl.cansfcs = 0;
-    // sys_ctrl.txoff = 0;
-    // sys_ctrl.wait4resp = 1;
-    // sys_ctrl.hrbpt = 1;
     if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CTRL, &sys_ctrl, sizeof(sys_ctrl), NULL))
         goto err;
 

@@ -2544,29 +2544,6 @@ struct dw1000_reg
     uint8_t reg_file_type;
 };
 
-struct dw1000_trx_para
-{
-    enum dw1000_chan_sel tx_chan;       // Transmit channel
-    enum dw1000_chan_sel rx_chan;       // Receive channel
-    enum dw1000_pcode_sel tx_pcode;     // Preamble code used in the transmitter
-    enum dw1000_pcode_sel rx_pcode;     // Preamble code used in the receiver
-    uint16_t tflen;                     // Transmit Frame Length (Data Length)
-    enum dw1000_br_sel txbr_sel;        // Data Rate
-    enum dw1000_prf_sel txprf_sel;      // PRF
-    enum dw1000_psr_sel txpsr_sel;      // Preamble Length
-    enum dw1000_br_sel rxbr_sel;        // Data Rate
-    enum dw1000_prf_sel rxprf_sel;      // PRF
-    enum dw1000_psr_sel rxpsr_sel;      // Preamble Length
-    uint16_t buf_ofs;                   // Transmit buffer index offset
-    uint8_t ifs_delay;                  // Inter-Frame Spacing (Delay)
-    uint64_t txdlys;                    // Delayed Send Time (Unit: 15.65 picoseconds)
-    //
-    uint32_t drx_tune2;                 // Digital Tuning Register 2 (for PAC size and RXPRF)
-    uint32_t drx_pretoc;                // Preamble detection timeout count (in units of PAC size symbols)
-    uint32_t drx_sfdtoc;                // SFD detection timeout count (Default: 4096 + 64 + 1 symbols)
-    uint64_t rxdlye;                    // Delayed Receive Time (Unit: 15.65 picoseconds)
-};
-
 struct dw1000_context
 {
     uint8_t tx_buf[64] __attribute__((aligned(4)));
