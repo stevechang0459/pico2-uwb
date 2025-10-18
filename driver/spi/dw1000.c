@@ -1466,8 +1466,8 @@ int dw1000_init()
     /**
      * whilst SFD detection timeout (see Sub-Register 0x27:20 – DRX_SFDTOC) is on.
      */
-    drx_conf->drx_stdtoc.value = 4096 + 64 + 1;
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_SFDTOC, &drx_conf->drx_stdtoc, sizeof(drx_conf->drx_stdtoc), "drx_stdtoc: "))
+    drx_conf->drx_sfdtoc.value = 4096 + 64 + 1;
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_SFDTOC, &drx_conf->drx_sfdtoc, sizeof(drx_conf->drx_sfdtoc), "drx_sfdtoc: "))
         goto err;
 
     /**

@@ -1363,7 +1363,7 @@ union DW1000_SUB_REG_DRX_RES2
 };
 
 // Sub-Register 0x27:20 - DRX_SFDTOC, SFD detection timeout count
-union DW1000_SUB_REG_DRX_STDTOC
+union DW1000_SUB_REG_DRX_SFDTOC
 {
     uint16_t value;                     // Bit[15:0] SFD detection timeout count (in units of preamble symbols).
 };
@@ -1429,7 +1429,7 @@ union DW1000_REG_DRX_CONF
         union DW1000_SUB_REG_DRX_TUNE1B drx_tune1b;     // Byte[7:6] Digital Tuning Register 1b.
         union DW1000_SUB_REG_DRX_TUNE2 drx_tune2;       // Byte[11:8] Digital Tuning Register 2.4
         union DW1000_SUB_REG_DRX_RES2 drx_res2;         // Byte[31:12] Reserved area 2.
-        union DW1000_SUB_REG_DRX_STDTOC drx_stdtoc;     // Byte[33:32] SFD detection timeout count.
+        union DW1000_SUB_REG_DRX_SFDTOC drx_sfdtoc;     // Byte[33:32] SFD detection timeout count.
         union DW1000_SUB_REG_DRX_RES3 drx_res3;         // Byte[35:34] Reserved area 3.
         union DW1000_SUB_REG_DRX_PRETOC drx_pretoc;     // Byte[37:36] Preamble detection timeout count.
         union DW1000_SUB_REG_DRX_TUNE4H drx_tune4h;     // Byte[39:38] Digital Tuning Register.
