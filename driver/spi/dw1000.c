@@ -869,14 +869,16 @@ err:
  *       on a stable system clock. It is typically invoked at the start of
  *       @ref dw1000_init() before waiting for the PLL to lock.
  */
-int dw1000_hard_reset()
+int dw1000_hard_reset(bool verbose)
 {
-    printf("RSTn S\n");
+    if (verbose)
+        printf("RSTn S\n");
     gpio_put(RSTn_PIN, 0);
     sleep_ms(1);
     gpio_put(RSTn_PIN, 1);
     sleep_ms(1);
-    printf("RSTn E\n");
+    if (verbose)
+        printf("RSTn E\n");
 
     // Enable Clock PLL lock detect tune.
     const struct spi_config *spi_cfg = &m_dw1000_ctx.spi_cfg;
@@ -1043,7 +1045,7 @@ err:
  * @retval 0  PLL successfully locked.
  * @retval -1 Failure occurred (hardware reset or SPI access error, or PLL did not lock).
  */
-int dw1000_wait_pll_lock()
+int dw1000_wait_pll_lock(bool verbose)
 {
     // Wait PLL Lock
     for (int i = 0; ; i++) {
@@ -1060,15 +1062,18 @@ int dw1000_wait_pll_lock()
         if (dw1000_short_indexed_read(spi_cfg, DW1000_RF_CONF, DW1000_RF_STATUS, &rf_status, sizeof(rf_status), NULL))
             goto err;
 
-        printf("sys_status:%02x_%08x,cplock:%d\n", sys_status.ofs_04.value, sys_status.ofs_00.value, sys_status.ofs_00.cplock);
-        printf("rf_status:%08x,cplllock:%d\n", rf_status.value, rf_status.cplllock);
+        if (verbose) {
+            printf("sys_status:%02x_%08x,cplock:%d\n", sys_status.ofs_04.value, sys_status.ofs_00.value, sys_status.ofs_00.cplock);
+            printf("rf_status:%08x,cplllock:%d\n", rf_status.value, rf_status.cplllock);
+        }
 
         if (!rf_status.cplllock) {
             printf("[WARN] PLL not locked (attempt %d). Reinitializing...\n", i + 1);
-            if (dw1000_hard_reset())
+            if (dw1000_hard_reset(verbose))
                 goto err;
         } else {
-            printf("PLL locked successfully.\n");
+            if (verbose)
+                printf("PLL locked successfully.\n");
             if (dw1000_clear_sys_status(spi_cfg))
                 goto err;
             break;
@@ -1086,15 +1091,15 @@ err:
  * TODO: External Synchronisation
  * TODO: IC Calibration – Crystal Oscillator Trim
  */
-int dw1000_init()
+int dw1000_init(bool verbose)
 {
     printf("%s\n", __func__);
 
     // Perform initial hardware reset before checking PLL status
-    if (dw1000_hard_reset())
+    if (dw1000_hard_reset(verbose))
         goto err;
 
-    if (dw1000_wait_pll_lock())
+    if (dw1000_wait_pll_lock(verbose))
         goto err;
 
     /* *************************************************************************
@@ -1126,14 +1131,16 @@ int dw1000_init()
 #endif
     sys_cfg->dis_stxp = (sys_cfg->rxm110k ? true : false);
 
-    printf("Host interrupt polarity          : %s\n", (sys_cfg->hirq_pol ? "true" : "false"));
-    printf("Disable Double RX Buffer         : %s\n", (sys_cfg->dis_drxb ? "true" : "false"));
-    printf("Disable Smart TX Power control   : %s\n", (sys_cfg->dis_stxp ? "true" : "false"));
-    printf("Receiver Mode 110 kbps data rate : %s\n", (sys_cfg->rxm110k  ? "true" : "false"));
-    printf("Receiver Auto-Re-enable          : %s\n", (sys_cfg->rxautr   ? "true" : "false"));
+    if (verbose) {
+        printf("Host interrupt polarity          : %s\n", (sys_cfg->hirq_pol ? "true" : "false"));
+        printf("Disable Double RX Buffer         : %s\n", (sys_cfg->dis_drxb ? "true" : "false"));
+        printf("Disable Smart TX Power control   : %s\n", (sys_cfg->dis_stxp ? "true" : "false"));
+        printf("Receiver Mode 110 kbps data rate : %s\n", (sys_cfg->rxm110k  ? "true" : "false"));
+        printf("Receiver Auto-Re-enable          : %s\n", (sys_cfg->rxautr   ? "true" : "false"));
+    }
 
     const struct spi_config *spi_cfg = &m_dw1000_ctx.spi_cfg;
-    if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CFG, sys_cfg, sizeof(*sys_cfg), "sys_cfg: "))
+    if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CFG, sys_cfg, sizeof(*sys_cfg), !verbose ? NULL : "sys_cfg: "))
         goto err;
 
     /**
@@ -1143,13 +1150,13 @@ int dw1000_init()
     // if (sys_cfg->rxwtoe) {
         union DW1000_REG_RX_FWTO *rx_fwto = &m_dw1000_ctx.rx_fwto;
         rx_fwto->rxfwto = UINT16_MAX;
-        if (dw1000_non_indexed_write(spi_cfg, DW1000_RX_FWTO, rx_fwto, sizeof(*rx_fwto), "rx_fwto: "))
+        if (dw1000_non_indexed_write(spi_cfg, DW1000_RX_FWTO, rx_fwto, sizeof(*rx_fwto), !verbose ? NULL : "rx_fwto: "))
             goto err;
     // }
 
     union DW1000_SUB_REG_GPIO_MODE *gpio_mode = &m_dw1000_ctx.gpio_mode;
     gpio_mode->value = 0;
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_GPIO_CTRL, DW1000_GPIO_MODE, gpio_mode, sizeof(*gpio_mode), "gpio_mode: "))
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_GPIO_CTRL, DW1000_GPIO_MODE, gpio_mode, sizeof(*gpio_mode), !verbose ? NULL : "gpio_mode: "))
         goto err;
 
     /**
@@ -1157,7 +1164,7 @@ int dw1000_init()
      */
     union DW1000_REG_RX_SNIFF *rx_sniff = &m_dw1000_ctx.rx_sniff;
     rx_sniff->value = 0;
-    if (dw1000_non_indexed_write(spi_cfg, DW1000_RX_SNIFF, rx_sniff, sizeof(*rx_sniff), "rx_sniff: "))
+    if (dw1000_non_indexed_write(spi_cfg, DW1000_RX_SNIFF, rx_sniff, sizeof(*rx_sniff), !verbose ? NULL : "rx_sniff: "))
         goto err;
 
     union DW1000_REG_PMSC *pmsc = &m_dw1000_ctx.pmsc;
@@ -1216,7 +1223,7 @@ int dw1000_init()
     hard_assert(chan_ctrl->tx_chan == chan_ctrl->rx_chan);
     hard_assert((chan_ctrl->rxprf == DW1000_PRF_16MHZ) || (chan_ctrl->rxprf == DW1000_PRF_64MHZ));
     hard_assert(chan_ctrl->tx_pcode == chan_ctrl->rx_pcode);
-    if (dw1000_non_indexed_write(spi_cfg, DW1000_CHAN_CTRL, chan_ctrl, sizeof(*chan_ctrl), "chan_ctrl: "))
+    if (dw1000_non_indexed_write(spi_cfg, DW1000_CHAN_CTRL, chan_ctrl, sizeof(*chan_ctrl), !verbose ? NULL : "chan_ctrl: "))
         goto err;
 
     /**
@@ -1260,13 +1267,13 @@ int dw1000_init()
         hard_assert(0);
     };
     // TODO: IC Calibration – Crystal Oscillator Trim
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_FS_CTRL, DW1000_FS_PLLCFG, &fs_ctrl->fs_pllcfg, sizeof(fs_ctrl->fs_pllcfg), "fs_pllcfg: "))
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_FS_CTRL, DW1000_FS_PLLCFG, &fs_ctrl->fs_pllcfg, sizeof(fs_ctrl->fs_pllcfg), !verbose ? NULL : "fs_pllcfg: "))
         goto err;
 
     /**
      * FS_PLLTUNE is set to 0x46 by default, which is not the optimal value for channel 5.
      */
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_FS_CTRL, DW1000_FS_PLLTUNE, &fs_ctrl->fs_plltune, sizeof(fs_ctrl->fs_plltune), "fs_plltune: "))
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_FS_CTRL, DW1000_FS_PLLTUNE, &fs_ctrl->fs_plltune, sizeof(fs_ctrl->fs_plltune), !verbose ? NULL : "fs_plltune: "))
         goto err;
 
     /* *************************************************************************
@@ -1287,37 +1294,41 @@ int dw1000_init()
     tx_fctrl->ofs_00.txprf    = DW1000_PRF;
     tx_fctrl->ofs_00.txpsr    = DW1000_PSR & 0x3;
     tx_fctrl->ofs_00.pe       = DW1000_PSR >> 2;
+
     uint8_t psr = (tx_fctrl->ofs_00.pe << 2) | tx_fctrl->ofs_00.txpsr;
-    const char *_txbr[] = {
-        "110 kbps",
-        "850 kbps",
-        "6.8 Mbps",
-        "Reserved"
-    };
-    printf("Bit Rate                         : %s (%d)\n", _txbr[tx_fctrl->ofs_00.txbr], tx_fctrl->ofs_00.txbr);
-    const char *_txprf[] = {
-        "4 MHz",
-        "16 MHz",
-        "64 MHz",
-        "Reserved"
-    };
-    printf("Nominal PRF                      : %s (%d)\n", _txprf[tx_fctrl->ofs_00.txprf], tx_fctrl->ofs_00.txprf);
-    const uint16_t _txpsr[] = {
-        [0x1] = 64,
-        [0x2] = 1024,
-        [0x3] = 4096,
-        [0x5] = 128,
-        [0x9] = 256,
-        [0xd] = 512,
-        [0x6] = 1536,
-        [0xa] = 2048,
-    };
-    printf("Preamble Length                  : %d (%x,%x)\n", _txpsr[psr] , tx_fctrl->ofs_00.txpsr, tx_fctrl->ofs_00.pe);
+    if (verbose) {
+        const char *_txbr[] = {
+            "110 kbps",
+            "850 kbps",
+            "6.8 Mbps",
+            "Reserved"
+        };
+        printf("Bit Rate                         : %s (%d)\n", _txbr[tx_fctrl->ofs_00.txbr], tx_fctrl->ofs_00.txbr);
+        const char *_txprf[] = {
+            "4 MHz",
+            "16 MHz",
+            "64 MHz",
+            "Reserved"
+        };
+        printf("Nominal PRF                      : %s (%d)\n", _txprf[tx_fctrl->ofs_00.txprf], tx_fctrl->ofs_00.txprf);
+        const uint16_t _txpsr[] = {
+            [0x1] = 64,
+            [0x2] = 1024,
+            [0x3] = 4096,
+            [0x5] = 128,
+            [0x9] = 256,
+            [0xd] = 512,
+            [0x6] = 1536,
+            [0xa] = 2048,
+        };
+        printf("Preamble Length                  : %d (%x,%x)\n", _txpsr[psr] , tx_fctrl->ofs_00.txpsr, tx_fctrl->ofs_00.pe);
+    }
+
     hard_assert(tx_fctrl->ofs_00.tflen <= DW1000_TX_BUFFER_SIZE);
     hard_assert(!((sys_cfg->rxm110k == true) ^ (tx_fctrl->ofs_00.txbr == DW1000_BR_110KBPS)));
     hard_assert((tx_fctrl->ofs_00.txprf == DW1000_PRF_16MHZ) || (tx_fctrl->ofs_00.txprf == DW1000_PRF_64MHZ));
     hard_assert((tx_fctrl->ofs_00.txprf == chan_ctrl->rxprf));
-    if (dw1000_non_indexed_write(spi_cfg, DW1000_TX_FCTRL, tx_fctrl, sizeof(*tx_fctrl), "tx_fctrl: "))
+    if (dw1000_non_indexed_write(spi_cfg, DW1000_TX_FCTRL, tx_fctrl, sizeof(*tx_fctrl), !verbose ? NULL : "tx_fctrl: "))
         goto err;
 
     m_dw1000_ctx.is_txprf_16mhz = ((tx_fctrl->ofs_00.txprf == DW1000_PRF_16MHZ) ? true : false);
@@ -1373,7 +1384,7 @@ int dw1000_init()
             hard_assert(0);
         }
     }
-    if (dw1000_non_indexed_write(spi_cfg, DW1000_TX_POWER, tx_power, sizeof(*tx_power), "tx_power: "))
+    if (dw1000_non_indexed_write(spi_cfg, DW1000_TX_POWER, tx_power, sizeof(*tx_power), !verbose ? NULL : "tx_power: "))
         goto err;
 
     /* *************************************************************************
@@ -1387,29 +1398,34 @@ int dw1000_init()
      */
     union DW1000_REG_DRX_CONF *drx_conf = &m_dw1000_ctx.drx_conf;
     m_dw1000_ctx.is_standard_sfd = ((chan_ctrl->dwsfd || chan_ctrl->tnssfd || chan_ctrl->rnssfd) ? false : true);
-    printf("Start of Frame Delimiter         : %s (%d,%d,%d)\n",
-        (m_dw1000_ctx.is_standard_sfd   ? "Standard SFD" : "Standard SFD"),
-        chan_ctrl->dwsfd, chan_ctrl->tnssfd, chan_ctrl->rnssfd);
+    if (verbose)
+        printf("Start of Frame Delimiter         : %s (%d,%d,%d)\n",
+            (m_dw1000_ctx.is_standard_sfd   ? "Standard SFD" : "Standard SFD"),
+            chan_ctrl->dwsfd, chan_ctrl->tnssfd, chan_ctrl->rnssfd);
 
     bool is_standard_sfd = m_dw1000_ctx.is_standard_sfd;
+    uint16_t sfd_length;
     switch (tx_fctrl->ofs_00.txbr) {
     case DW1000_BR_110KBPS:
+        sfd_length = 64;
         drx_conf->drx_tune0b.value = (is_standard_sfd ? 0x000A : 0x0016);
         break;
     case DW1000_BR_850KBPS:
+        sfd_length = 8;
         drx_conf->drx_tune0b.value = (is_standard_sfd ? 0x0001 : 0x0006);
         break;
     case DW1000_BR_6800KBPS:
+        sfd_length = 8;
         drx_conf->drx_tune0b.value = (is_standard_sfd ? 0x0001 : 0x0002);
         break;
     default:
         hard_assert(0);
     }
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_TUNE0b, &drx_conf->drx_tune0b, sizeof(drx_conf->drx_tune0b), "drx_tune0b: "))
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_TUNE0b, &drx_conf->drx_tune0b, sizeof(drx_conf->drx_tune0b), !verbose ? NULL : "drx_tune0b: "))
         goto err;
 
     drx_conf->drx_tune1a.value = (chan_ctrl->rxprf == DW1000_PRF_16MHZ ? 0x0087 : 0x008D);
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_TUNE1a, &drx_conf->drx_tune1a, sizeof(drx_conf->drx_tune1a), "drx_tune1a: "))
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_TUNE1a, &drx_conf->drx_tune1a, sizeof(drx_conf->drx_tune1a), !verbose ? NULL : "drx_tune1a: "))
         goto err;
 
     switch (psr) {
@@ -1433,48 +1449,78 @@ int dw1000_init()
     default:
         hard_assert(0);
     }
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_TUNE1b, &drx_conf->drx_tune1b, sizeof(drx_conf->drx_tune1b), "drx_tune1b: "))
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_TUNE1b, &drx_conf->drx_tune1b, sizeof(drx_conf->drx_tune1b), !verbose ? NULL : "drx_tune1b: "))
         goto err;
 
+    uint8_t pac_size;
+    uint16_t preamble_length;
     switch (psr) {
     // Recommended PAC size: 8
     case DW1000_PSR_64:
+        pac_size = 8;
+        preamble_length = 64;
+        drx_conf->drx_tune2.value = (chan_ctrl->rxprf == DW1000_PRF_16MHZ ? 0x311A002D : 0x313B006B);
+        break;
     case DW1000_PSR_128:
+        pac_size = 8;
+        preamble_length = 128;
         drx_conf->drx_tune2.value = (chan_ctrl->rxprf == DW1000_PRF_16MHZ ? 0x311A002D : 0x313B006B);
         break;
     // Recommended PAC size: 16
     case DW1000_PSR_256:
+        pac_size = 16;
+        preamble_length = 256;
+        drx_conf->drx_tune2.value = (chan_ctrl->rxprf == DW1000_PRF_16MHZ ? 0x331A0052 : 0x333B00BE);
+        break;
     case DW1000_PSR_512:
+        pac_size = 16;
+        preamble_length = 512;
         drx_conf->drx_tune2.value = (chan_ctrl->rxprf == DW1000_PRF_16MHZ ? 0x331A0052 : 0x333B00BE);
         break;
     // Recommended PAC size: 32
     case DW1000_PSR_1024:
+        pac_size = 32;
+        preamble_length = 1024;
         drx_conf->drx_tune2.value = (chan_ctrl->rxprf == DW1000_PRF_16MHZ ? 0x351A009A : 0x353B015E);
         break;
     // Recommended PAC size: 64
     case DW1000_PSR_1536:
+        pac_size = 64;
+        preamble_length = 1536;
+        drx_conf->drx_tune2.value = (chan_ctrl->rxprf == DW1000_PRF_16MHZ ? 0x371A011D : 0x373B0296);
+        break;
     case DW1000_PSR_2048:
+        pac_size = 64;
+        preamble_length = 2048;
+        drx_conf->drx_tune2.value = (chan_ctrl->rxprf == DW1000_PRF_16MHZ ? 0x371A011D : 0x373B0296);
+        break;
     case DW1000_PSR_4096:
+        pac_size = 64;
+        preamble_length = 4096;
         drx_conf->drx_tune2.value = (chan_ctrl->rxprf == DW1000_PRF_16MHZ ? 0x371A011D : 0x373B0296);
         break;
     default:
         hard_assert(0);
     }
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_TUNE2, &drx_conf->drx_tune2, sizeof(drx_conf->drx_tune2), "drx_tune2: "))
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_TUNE2, &drx_conf->drx_tune2, sizeof(drx_conf->drx_tune2), !verbose ? NULL : "drx_tune2: "))
         goto err;
 
     /**
      * whilst SFD detection timeout (see Sub-Register 0x27:20 – DRX_SFDTOC) is on.
      */
-    drx_conf->drx_sfdtoc.value = 4096 + 64 + 1;
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_SFDTOC, &drx_conf->drx_sfdtoc, sizeof(drx_conf->drx_sfdtoc), "drx_sfdtoc: "))
+    drx_conf->drx_sfdtoc.value = preamble_length + sfd_length + 1 - pac_size;
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_SFDTOC, &drx_conf->drx_sfdtoc, sizeof(drx_conf->drx_sfdtoc), !verbose ? NULL : "drx_sfdtoc: "))
         goto err;
+    if (verbose)
+        printf("SFD Detection Timeout            : %d\n", drx_conf->drx_sfdtoc.value);
+
+    // TBD: Register file: 0x21 – User defined SFD sequence
 
     /**
      * preamble detection timeout (see Sub-Register 0x27:24 – DRX_PRETOC) are off,
      */
     drx_conf->drx_pretoc.value = 0;
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_PRETOC, &drx_conf->drx_pretoc, sizeof(drx_conf->drx_pretoc), "drx_pretoc: "))
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_PRETOC, &drx_conf->drx_pretoc, sizeof(drx_conf->drx_pretoc), !verbose ? NULL : "drx_pretoc: "))
         goto err;
 
     /**
@@ -1483,7 +1529,7 @@ int dw1000_init()
      * the preamble length expected by the receiver.
      */
     drx_conf->drx_tune4h.value = (psr == DW1000_PSR_64 ? 0x0010 : 0x0028);
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_TUNE4H, &drx_conf->drx_tune4h, sizeof(drx_conf->drx_tune4h), "drx_tune4h: "))
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_DRX_CONF, DW1000_DRX_TUNE4H, &drx_conf->drx_tune4h, sizeof(drx_conf->drx_tune4h), !verbose ? NULL : "drx_tune4h: "))
         goto err;
 
     /**
@@ -1502,7 +1548,7 @@ int dw1000_init()
         rf_conf->rf_rxctrlh.value = 0xBC;
         break;
     }
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_RF_CONF, DW1000_RF_RXCTRLH, &rf_conf->rf_rxctrlh, sizeof(rf_conf->rf_rxctrlh), "rf_rxctrlh: "))
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_RF_CONF, DW1000_RF_RXCTRLH, &rf_conf->rf_rxctrlh, sizeof(rf_conf->rf_rxctrlh), !verbose ? NULL : "rf_rxctrlh: "))
         goto err;
 
     /**
@@ -1546,7 +1592,7 @@ int dw1000_init()
         rf_conf->rf_txctrl.value[2] = 0x1E;
         break;
     }
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_RF_CONF, DW1000_RF_TXCTRL, &rf_conf->rf_txctrl, sizeof(rf_conf->rf_txctrl), "rf_txctrl: "))
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_RF_CONF, DW1000_RF_TXCTRL, &rf_conf->rf_txctrl, sizeof(rf_conf->rf_txctrl), !verbose ? NULL : "rf_txctrl: "))
         goto err;
 
     /* *************************************************************************
@@ -1559,7 +1605,7 @@ int dw1000_init()
      */
     union DW1000_REG_AGC_CTRL *agc_ctrl = &m_dw1000_ctx.agc_ctrl;
     agc_ctrl->agc_tune1.value = (is_txprf_16mhz ? 0x8870 : 0x889B);
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_AGC_CTRL, DW1000_AGC_TUNE1, &agc_ctrl->agc_tune1, sizeof(agc_ctrl->agc_tune1), "agc_tune1: "))
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_AGC_CTRL, DW1000_AGC_TUNE1, &agc_ctrl->agc_tune1, sizeof(agc_ctrl->agc_tune1), !verbose ? NULL : "agc_tune1: "))
         goto err;
 
     /**
@@ -1567,7 +1613,7 @@ int dw1000_init()
      * operation of the AGC.
      */
     agc_ctrl->agc_tune2.value = 0x2502a907;
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_AGC_CTRL, DW1000_AGC_TUNE2, &agc_ctrl->agc_tune2, sizeof(agc_ctrl->agc_tune2), "agc_tune2: "))
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_AGC_CTRL, DW1000_AGC_TUNE2, &agc_ctrl->agc_tune2, sizeof(agc_ctrl->agc_tune2), !verbose ? NULL : "agc_tune2: "))
         goto err;
 
     /**
@@ -1577,7 +1623,7 @@ int dw1000_init()
     if (dw1000_long_indexed_read(spi_cfg, DW1000_LDE_CTRL, DW1000_LDE_CFG1, lde_cfg1, sizeof(*lde_cfg1), NULL))
         goto err;
     lde_cfg1->ntm = 0xD;
-    if (dw1000_long_indexed_write(spi_cfg, DW1000_LDE_CTRL, DW1000_LDE_CFG1, lde_cfg1, sizeof(*lde_cfg1), "lde_cfg1: "))
+    if (dw1000_long_indexed_write(spi_cfg, DW1000_LDE_CTRL, DW1000_LDE_CFG1, lde_cfg1, sizeof(*lde_cfg1), !verbose ? NULL : "lde_cfg1: "))
         goto err;
 
     /**
@@ -1586,7 +1632,7 @@ int dw1000_init()
      */
     union DW1000_SUB_REG_LDE_CFG2 *lde_cfg2 = &m_dw1000_ctx.lde_cfg2;
     lde_cfg2->value = (is_txprf_16mhz ? 0x1607 : 0x0607);
-    if (dw1000_long_indexed_write(spi_cfg, DW1000_LDE_CTRL, DW1000_LDE_CFG2, lde_cfg2, sizeof(*lde_cfg2), "lde_cfg2: "))
+    if (dw1000_long_indexed_write(spi_cfg, DW1000_LDE_CTRL, DW1000_LDE_CFG2, lde_cfg2, sizeof(*lde_cfg2), !verbose ? NULL : "lde_cfg2: "))
         goto err;
 
     union DW1000_SUB_REG_LDE_REPC *lde_repc = &m_dw1000_ctx.lde_repc;
@@ -1618,7 +1664,7 @@ int dw1000_init()
     };
     uint16_t temp = _lde_repc[chan_ctrl->rx_pcode - 1];
     lde_repc->value = (tx_fctrl->ofs_00.txbr == DW1000_BR_110KBPS ? temp >> 3 : temp);
-    if (dw1000_long_indexed_write(spi_cfg, DW1000_LDE_CTRL, DW1000_LDE_REPC, lde_repc, sizeof(*lde_repc), "lde_repc: "))
+    if (dw1000_long_indexed_write(spi_cfg, DW1000_LDE_CTRL, DW1000_LDE_REPC, lde_repc, sizeof(*lde_repc), !verbose ? NULL : "lde_repc: "))
         goto err;
 
     /**
@@ -1647,7 +1693,7 @@ int dw1000_init()
     default:
         hard_assert(0);
     }
-    if (dw1000_short_indexed_write(spi_cfg, DW1000_TX_CAL, DW1000_TC_PGDELAY, tc_pgdelay, sizeof(*tc_pgdelay), "tc_pgdelay: "))
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_TX_CAL, DW1000_TC_PGDELAY, tc_pgdelay, sizeof(*tc_pgdelay), !verbose ? NULL : "tc_pgdelay: "))
         goto err;
 
     // Clear the interrupt status
@@ -2030,7 +2076,7 @@ void dw1000_unit_test()
     if (driver_dw1000_spi_init())
         return;
 
-    if (dw1000_init())
+    if (dw1000_init(true))
         return;
 
     const struct spi_config *spi_cfg = &m_dw1000_ctx.spi_cfg;
