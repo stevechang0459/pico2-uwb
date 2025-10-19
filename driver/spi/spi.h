@@ -14,7 +14,7 @@
 #include <stdint.h>
 
 #define BUF_SIZE        (4096)
-#define SPI_SPEED       (1000 * 1000)   // 1MHz, 1000KHz
+#define SPI_SPEED       (2000 * 1000)   // 1MHz, 1000KHz
 
 struct gpio_spi_pin
 {

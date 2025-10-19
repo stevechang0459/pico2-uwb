@@ -1893,6 +1893,42 @@ err:
     return -1;
 }
 
+int dw1000_delayed_transmit_message(void *buf, size_t len, uint64_t dx_time, bool wait4resp)
+{
+    if (buf == NULL || len == 0)
+        goto err;
+
+    const struct spi_config *spi_cfg = &m_dw1000_ctx.spi_cfg;
+
+    if (dw1000_non_indexed_write(spi_cfg, DW1000_DX_TIME, &dx_time, sizeof(union DW1000_REG_DX_TIME), NULL))
+        goto err;
+
+    union DW1000_REG_TX_FCTRL *tx_fctrl = &m_dw1000_ctx.tx_fctrl;
+    len = len + 2;
+    m_dw1000_ctx.tx_fctrl.ofs_00.tflen = (len & 0x7F);
+    if (m_dw1000_ctx.sys_cfg.phr_mode == DW1000_SYS_CFG_PHR_LONG_FRAME) {
+        m_dw1000_ctx.tx_fctrl.ofs_00.tfle = (len >> 7) & 0x3;
+        hard_assert(0);
+    }
+    if (dw1000_non_indexed_write(spi_cfg, DW1000_TX_FCTRL, &m_dw1000_ctx.tx_fctrl, sizeof(m_dw1000_ctx.tx_fctrl), NULL))
+        goto err;
+
+    if (dw1000_prepare_tx_buffer(spi_cfg, buf, len))
+        goto err;
+
+    union DW1000_REG_SYS_CTRL sys_ctrl = {.txstrt = 1, .txdlys = 1, .wait4resp = !!wait4resp};
+    if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CTRL, &sys_ctrl, sizeof(sys_ctrl), NULL))
+        goto err;
+
+    pico_set_led(led_out);
+    led_out = !led_out;
+
+    return 0;
+err:
+    dw1000_trace(ERROR, "%s failed\n", __func__);
+    return -1;
+}
+
 void dw1000_isr()
 {
     const struct spi_config *spi_cfg = &m_dw1000_ctx.spi_cfg;
@@ -2083,6 +2119,7 @@ void dw1000_unit_test()
         goto err;
 
 #if (CONFIG_DW1000_ANCHOR)
+    union DW1000_REG_RX_TIME rx_time;
     m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
     while (1) {
         volatile union DW1000_REG_SYS_STATUS *sys_status = &m_dw1000_ctx.sys_status;
@@ -2103,11 +2140,8 @@ void dw1000_unit_test()
         #endif
         #endif
         #if (!CONFIG_DW1000_ANCHOR_LISTEN_TO)
-            union DW1000_REG_SYS_CFG *sys_cfg = &m_dw1000_ctx.sys_cfg;
-            if (dw1000_non_indexed_read(spi_cfg, DW1000_SYS_CFG, sys_cfg, sizeof(*sys_cfg), NULL))
-                goto err;
-            sys_cfg->rxwtoe = false;
-            if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CFG, sys_cfg, sizeof(*sys_cfg), NULL))
+            m_dw1000_ctx.sys_cfg.rxwtoe = false;
+            if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CFG, &m_dw1000_ctx.sys_cfg, sizeof(m_dw1000_ctx.sys_cfg), NULL))
                 goto err;
         #endif
 
@@ -2127,6 +2161,22 @@ void dw1000_unit_test()
             if (sys_status->ofs_00.rxfcg) {
                 sys_status->ofs_00.value = 0;
 
+            #if (CONFIG_DW1000_DELAY_TX)
+               if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_TIME, &rx_time, 5, NULL))
+                    goto err;
+                dw1000_trace(PERF, "rx_stamp: %llx\n", rx_time.rx_stamp);
+
+                union ieee_blink_frame *rx_frame = (void *)m_dw1000_ctx.rx_buf;
+                if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_BUFFER, rx_frame, 10, NULL))
+                    goto err;
+            #else
+                if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_TIME, &rx_time, sizeof(rx_time), NULL))
+                    goto err;
+                // print_buf(&rx_time, sizeof(rx_time), "rx_time:\n");
+                uint64_t rx_rawst = ((uint64_t)rx_time.rx_rawst_h << 24) | (uint64_t)rx_time.rx_rawst_l;
+                dw1000_trace(INFO, "rx_stamp: %10llx\n", rx_time.rx_stamp);
+                dw1000_trace(INFO, "rx_rawst: %10llx\n", rx_rawst);
+
                 union DW1000_REG_RX_FINFO rx_finfo;
                 if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_FINFO, &rx_finfo, sizeof(rx_finfo), NULL))
                     goto err;
@@ -2136,12 +2186,12 @@ void dw1000_unit_test()
                 if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_BUFFER, rx_frame, rx_finfo.rxflen, NULL))
                     goto err;
                 // print_buf(rx_frame, rx_finfo.rxflen, "blink frame:\n");
-
+            #endif
                 if (rx_frame->fctrl == IEEE_802_15_4_BLINK_CCP_64) {
                     m_dw1000_ctx.tar_addr = rx_frame->long_address;
                     m_dw1000_ctx.seq_num  = rx_frame->seq_num;
                     m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RANGING_INIT;
-                    dw1000_trace(INFO, "-> ranging init %d\n", m_dw1000_ctx.seq_num);
+                    dw1000_trace(PERF, "-> ranging init %d\n", m_dw1000_ctx.seq_num);
                 } else {
                     dw1000_trace(WARN, "@@ invalid blink\n");
                     m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
@@ -2159,11 +2209,8 @@ void dw1000_unit_test()
         case DW1000_DS_TWR_STATE_RANGING_INIT:
         {
         #if (!CONFIG_DW1000_ANCHOR_LISTEN_TO)
-            union DW1000_REG_SYS_CFG *sys_cfg = &m_dw1000_ctx.sys_cfg;
-            if (dw1000_non_indexed_read(spi_cfg, DW1000_SYS_CFG, sys_cfg, sizeof(*sys_cfg), NULL))
-                goto err;
-            sys_cfg->rxwtoe = true;
-            if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CFG, sys_cfg, sizeof(*sys_cfg), NULL))
+            m_dw1000_ctx.sys_cfg.rxwtoe = true;
+            if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CFG, &m_dw1000_ctx.sys_cfg, sizeof(m_dw1000_ctx.sys_cfg), NULL))
                 goto err;
         #endif
 
@@ -2175,9 +2222,17 @@ void dw1000_unit_test()
             tx_frame->src_addr = m_dw1000_ctx.my_addr;
             tx_frame->code     = DW1000_TWR_CODE_RNG_INIT;
 
-            dw1000_trace(INFO, "-> poll wait %d\n", m_dw1000_ctx.seq_num);
+            dw1000_trace(PERF, "-> poll wait %d\n", m_dw1000_ctx.seq_num);
             m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_POLL_WAIT;
+        #if (CONFIG_DW1000_DELAY_TX)
+            #define DELAY_MS    (3)
+            tx_frame->delay_ms = DELAY_MS;
+            uint64_t dx_time = rx_time.rx_stamp + DX_TIME_MS(DELAY_MS);
+            dw1000_trace(PERF, " dx_time: %10llx, %llx\n", dx_time, DX_TIME_MS(DELAY_MS));
+            dw1000_delayed_transmit_message(tx_frame, sizeof(*tx_frame), dx_time, true);
+        #else
             dw1000_transmit_message(tx_frame, sizeof(*tx_frame), true);
+        #endif
             break;
         }
         case DW1000_DS_TWR_STATE_POLL_WAIT:

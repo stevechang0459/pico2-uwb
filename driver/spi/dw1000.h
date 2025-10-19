@@ -16,10 +16,11 @@
 #include "spi.h"
 
 #define CONFIG_DW1000_SYS_STS_DEBUG     (0)
-#define CONFIG_DW1000_TAG               (1)
+#define CONFIG_DW1000_TAG               (0)
 #define CONFIG_DW1000_ANCHOR            (!CONFIG_DW1000_TAG)
 #define CONFIG_DW1000_AUTO_RX           (1)
 #define CONFIG_DW1000_REINIT            (1)
+#define CONFIG_DW1000_DELAY_TX          (1)
 
 #if (CONFIG_DW1000_ANCHOR)
 #define CONFIG_DW1000_ANCHOR_LISTEN_TO      (1)
@@ -99,8 +100,8 @@
  *
  * 0.0672164102564103 s = 67.216 ms
  */
-#define RXFWTO_TIME_MS                  ((uint64_t)(t) * (IEEE_802_15_4_2001_CHIPPING_RATE / 512) / 1000ULL)
-#define RXFWTO_TIME_US                  ((uint64_t)(t) * (IEEE_802_15_4_2001_CHIPPING_RATE / 512) / 1000000ULL)
+#define RXFWTO_TIME_MS(t)               ((uint64_t)(t) * (IEEE_802_15_4_2001_CHIPPING_RATE / 512) / 1000ULL)
+#define RXFWTO_TIME_US(t)               ((uint64_t)(t) * (IEEE_802_15_4_2001_CHIPPING_RATE / 512) / 1000000ULL)
 
 #define DW1000_TX_BUFFER_SIZE           (1024)
 #define DW1000_RX_BUFFER_SIZE           (1024)
@@ -730,7 +731,7 @@ union DW1000_REG_SYS_MASK
 //     DW1000_SYS_MASK_MRFPLLLL | DW1000_SYS_MASK_MCLKPLLLL | DW1000_SYS_MASK_MRXSTDTO | \
 //     DW1000_SYS_MASK_MHPDWARN | DW1000_SYS_MASK_MTXBERR   | DW1000_SYS_MASK_MAFFREJ)
 
-#define DW1000_SYS_STS_MASK (DW1000_SYS_MASK_MRXFCG | DW1000_SYS_MASK_MRXRFTO)
+#define DW1000_SYS_STS_MASK (DW1000_SYS_MASK_MRXFCG | DW1000_SYS_MASK_MRXRFTO | DW1000_SYS_MASK_MHPDWARN)
 
 // REG:0F:00 - SYS_STATUS - System Status Register (octets 0 to 3)
 union DW1000_REG_SYS_STATUS_0F_00
@@ -876,15 +877,14 @@ union DW1000_REG_RX_TIME
 {
     struct
     {
-        uint32_t rx_stamp_l;            // The fully adjusted time of reception (low 32 bits of 40-bit value).
-        uint32_t rx_stamp_h : 8;        // The fully adjusted time of reception (high 8 bits of 40-bit value).
-        uint32_t fp_index   : 16;       // First path index.
-        uint32_t fp_ampl1_l : 8;        // First Path Amplitude point 1 (low 8 bits of 16-bit value).
+        uint64_t rx_stamp   : 40;       // The fully adjusted time of reception.
+        uint64_t fp_index   : 16;       // First path index.
+        uint64_t fp_ampl1_l : 8;        // First Path Amplitude point 1 (low 8 bits of 16-bit value).
         uint32_t fp_ampl1_h : 8;        // First Path Amplitude point 1 (high 8 bits of 16-bit value).
         uint32_t rx_rawst_l : 24;       // The Raw Timestamp for the frame (low 24 bits of 40-bit value).
         uint16_t rx_rawst_h;            // The Raw Timestamp for the frame (high 16 bits of 40-bit value).
     };
-    uint8_t value[14];
+    // uint8_t value[14];
 };
 
 _Static_assert(sizeof(union DW1000_REG_RX_TIME) == 14, "union DW1000_REG_RX_TIME must be 14 bytes");
@@ -2503,7 +2503,7 @@ union dw1000_rng_init_msg
         uint16_t src_addr;              //!< Source address
         uint8_t code;                   //!< Function code (0x20 to indicate the ranging init message)
         uint16_t tag_addr;
-        uint16_t resp_delay;
+        uint16_t delay_ms;
     };
 };
 
@@ -2634,6 +2634,7 @@ struct dw1000_context
 #define DW1000_TRACE_DEBUG              (0x00000004)
 #define DW1000_TRACE_WARN               (0x00000008)
 #define DW1000_TRACE_ERROR              (0x00000010)
+#define DW1000_TRACE_PERF               (0x00000020)
 
 #define DW1000_TRACE_FILTER \
     (DW1000_TRACE_INIT | DW1000_TRACE_INFO | DW1000_TRACE_DEBUG | DW1000_TRACE_WARN | DW1000_TRACE_ERROR)
