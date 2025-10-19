@@ -2621,7 +2621,6 @@ struct dw1000_context
     bool is_txprf_16mhz;
     bool lde_run_enable;
     bool sleep_enable;
-    volatile bool listen_to;
 };
 
 void dw1000_ctx_init();

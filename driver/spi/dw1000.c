@@ -1125,7 +1125,9 @@ int dw1000_init(bool verbose)
     sys_cfg->dis_drxb = true;
     // sys_cfg->rxm110k  = true;
     sys_cfg->rxm110k  = false;
+#if (CONFIG_DW1000_TAG)
     sys_cfg->rxwtoe = true;
+#endif
 #if (CONFIG_DW1000_AUTO_RX)
     sys_cfg->rxautr   = true;
 #endif
@@ -1898,15 +1900,7 @@ void dw1000_isr()
     if (dw1000_non_indexed_read(spi_cfg, DW1000_SYS_STATUS, sys_status, sizeof(*sys_status), NULL))
         goto err;
 
-    if (m_dw1000_ctx.twr_state != DW1000_DS_TWR_STATE_LISTEN)
-    {
-        m_dw1000_ctx.listen_to = false;
-        print_buf(sys_status, sizeof(*sys_status), "\nisr: ");
-    }
-    else
-    {
-        m_dw1000_ctx.listen_to = true;
-    }
+    print_buf(sys_status, sizeof(*sys_status), "\nisr: ");
 
     if (sys_status->ofs_00.value & (DW1000_SYS_STS_RXFCG | DW1000_SYS_STS_RXDFR))
     {
@@ -1931,10 +1925,7 @@ void dw1000_isr()
     }
     else if (sys_status->ofs_00.value & DW1000_SYS_STS_RXRFTO)
     {
-        if (m_dw1000_ctx.twr_state != DW1000_DS_TWR_STATE_LISTEN)
-        {
-            printf("rxrfto\n");
-        }
+        printf("rxrfto\n");
     }
     else if (sys_status->ofs_00.value & (DW1000_SYS_STS_RXFSL | DW1000_SYS_STS_RXFCE | DW1000_SYS_STS_RXPHE))
     {
@@ -2094,12 +2085,15 @@ void dw1000_unit_test()
             if (dw1000_init(false))
                 goto err;
         #endif
-            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_LISTEN;
-            if (m_dw1000_ctx.listen_to)
-                m_dw1000_ctx.listen_to = 0;
-            else
-                printf("-> listen\n");
+            union DW1000_REG_SYS_CFG *sys_cfg = &m_dw1000_ctx.sys_cfg;
+            if (dw1000_non_indexed_read(spi_cfg, DW1000_SYS_CFG, sys_cfg, sizeof(*sys_cfg), NULL))
+                goto err;
+            sys_cfg->rxwtoe = false;
+            if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CFG, sys_cfg, sizeof(*sys_cfg), NULL))
+                goto err;
 
+            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_LISTEN;
+            printf("-> listen\n");
             if (dw1000_rx_start(spi_cfg))
                 goto err;
             break;
@@ -2132,12 +2126,20 @@ void dw1000_unit_test()
             } else if (sys_status->ofs_00.rxrfto) {
                 sys_status->ofs_00.value = 0;
                 m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
+                hard_assert(0);
             }
             break;
         }
         // Ranging phase
         case DW1000_DS_TWR_STATE_RANGING_INIT:
         {
+            union DW1000_REG_SYS_CFG *sys_cfg = &m_dw1000_ctx.sys_cfg;
+            if (dw1000_non_indexed_read(spi_cfg, DW1000_SYS_CFG, sys_cfg, sizeof(*sys_cfg), NULL))
+                goto err;
+            sys_cfg->rxwtoe = true;
+            if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CFG, sys_cfg, sizeof(*sys_cfg), NULL))
+                goto err;
+
             union dw1000_rng_init_msg *tx_frame = (void *)m_dw1000_ctx.tx_buf;
             tx_frame->fctrl    = IEEE_802_15_4_FCTRL_RANGE_16;
             tx_frame->seq_num  = ++m_dw1000_ctx.seq_num;
