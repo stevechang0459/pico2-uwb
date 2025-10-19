@@ -16,14 +16,18 @@
 #include "spi.h"
 
 #define CONFIG_DW1000_SYS_STS_DEBUG     (0)
-#define CONFIG_DW1000_TAG               (0)
-#define CONFIG_DW1000_ANCHOR            (1)
+#define CONFIG_DW1000_TAG               (1)
+#define CONFIG_DW1000_ANCHOR            (!CONFIG_DW1000_TAG)
 #define CONFIG_DW1000_AUTO_RX           (1)
 #define CONFIG_DW1000_REINIT            (1)
-#if (CONFIG_DW1000_ANCHOR)
-#define CONFIG_DW1000_ANCHOR_POLLING_MODE (0)
-#endif
 
+#if (CONFIG_DW1000_ANCHOR)
+#define CONFIG_DW1000_ANCHOR_LISTEN_TO      (1)
+#define CONFIG_DW1000_ANCHOR_POLLING_MODE   (0)
+#else
+#define CONFIG_DW1000_ANCHOR_LISTEN_TO      (0)
+#define CONFIG_DW1000_ANCHOR_POLLING_MODE   (0)
+#endif
 
 #define IEEE_802_15_4_BLINK_CCP_64      (0xC5)
 // data, PAN ID Compress, 16 bits source address, 16 bits destination address
@@ -2621,6 +2625,7 @@ struct dw1000_context
     bool is_txprf_16mhz;
     bool lde_run_enable;
     bool sleep_enable;
+    volatile uint32_t listen_to;
 };
 
 
