@@ -893,6 +893,34 @@ err:
     return -1;
 }
 
+int dw1000_soft_reset(bool verbose)
+{
+    if (verbose)
+        dw1000_trace(INIT, "SRSTn S\n");
+    const struct spi_config *spi_cfg = &m_dw1000_ctx.spi_cfg;
+    union DW1000_SUB_REG_PMSC_CTRL0 *pmsc_ctrl0 = &m_dw1000_ctx.pmsc_ctrl0;
+    if (dw1000_short_indexed_read(spi_cfg, DW1000_PMSC, DW1000_PMSC_CTRL0, pmsc_ctrl0, sizeof(*pmsc_ctrl0), NULL))
+        goto err;
+    pmsc_ctrl0->sysclks = 1;
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_PMSC, DW1000_PMSC_CTRL0, pmsc_ctrl0, sizeof(*pmsc_ctrl0), NULL))
+        goto err;
+    sleep_ms(1);
+    pmsc_ctrl0->softreset = 0xF;
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_PMSC, DW1000_PMSC_CTRL0, pmsc_ctrl0, sizeof(*pmsc_ctrl0), NULL))
+        goto err;
+    sleep_ms(1);
+    pmsc_ctrl0->softreset = 0x0;
+    if (dw1000_short_indexed_write(spi_cfg, DW1000_PMSC, DW1000_PMSC_CTRL0, pmsc_ctrl0, sizeof(*pmsc_ctrl0), NULL))
+        goto err;
+    if (verbose)
+        dw1000_trace(INIT, "RSTn E\n");
+
+    return 0;
+err:
+    printf("%s failed\n", __func__);
+    return -1;
+}
+
 /**
  * @brief Clear all status bits by writing all 1s
  */
