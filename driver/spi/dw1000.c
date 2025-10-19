@@ -1129,7 +1129,7 @@ int dw1000_init(bool verbose)
 #if (CONFIG_DW1000_AUTO_RX)
     sys_cfg->rxautr   = true;
 #endif
-    sys_cfg->dis_stxp = (sys_cfg->rxm110k ? true : false);
+    sys_cfg->dis_stxp = (DW1000_BR != DW1000_BR_6800KBPS ? true : false);
 
     if (verbose) {
         printf("Host interrupt polarity          : %s\n", (sys_cfg->hirq_pol ? "true" : "false"));
