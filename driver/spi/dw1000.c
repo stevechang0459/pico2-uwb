@@ -1938,7 +1938,7 @@ void dw1000_isr()
     }
     else if (sys_status->ofs_00.value & (DW1000_SYS_STS_RXFSL | DW1000_SYS_STS_RXFCE | DW1000_SYS_STS_RXPHE))
     {
-        print_buf(sys_status, sizeof(*sys_status), "\nre00:\n");
+        print_buf(sys_status, sizeof(*sys_status), "\nre00: ");
         printf("rxf:%d-%d-(%d,%d)-%d-%d-(%d,%d)\n",
             sys_status->ofs_00.rxprd, sys_status->ofs_00.rxsfdd, sys_status->ofs_00.rxphd, sys_status->ofs_00.rxphe,
             sys_status->ofs_00.ldedone, sys_status->ofs_00.rxdfr,sys_status->ofs_00.rxfcg, sys_status->ofs_00.rxfce);
@@ -1949,7 +1949,7 @@ void dw1000_isr()
     }
     else if (sys_status->ofs_00.value & 0x3FFF9000)
     {
-        print_buf(sys_status, sizeof(*sys_status), "\nmics:\n");
+        print_buf(sys_status, sizeof(*sys_status), "\nmics: ");
         printf("rxf:%d-%d-(%d,%d)-%d-%d-(%d,%d)\n",
             sys_status->ofs_00.rxprd, sys_status->ofs_00.rxsfdd, sys_status->ofs_00.rxphd, sys_status->ofs_00.rxphe,
             sys_status->ofs_00.ldedone, sys_status->ofs_00.rxdfr,sys_status->ofs_00.rxfcg, sys_status->ofs_00.rxfce);
@@ -1960,7 +1960,7 @@ void dw1000_isr()
     }
     else if (sys_status->ofs_04.value & (DW1000_SYS_STS_TXPUTE | DW1000_SYS_STS_RXRSCS))
     {
-        print_buf(sys_status, sizeof(*sys_status), "\nre04:\n");
+        print_buf(sys_status, sizeof(*sys_status), "\nre04: ");
         printf("rxf:%d-%d-(%d,%d)-%d-%d-(%d,%d)\n",
             sys_status->ofs_00.rxprd, sys_status->ofs_00.rxsfdd, sys_status->ofs_00.rxphd, sys_status->ofs_00.rxphe,
             sys_status->ofs_00.ldedone, sys_status->ofs_00.rxdfr,sys_status->ofs_00.rxfcg, sys_status->ofs_00.rxfce);
