@@ -2090,6 +2090,10 @@ void dw1000_unit_test()
         switch (m_dw1000_ctx.twr_state) {
         case DW1000_DS_TWR_STATE_RX_INIT:
         {
+        #if (CONFIG_DW1000_REINIT)
+            if (dw1000_init(false))
+                goto err;
+        #endif
             m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_LISTEN;
             if (m_dw1000_ctx.listen_to)
                 m_dw1000_ctx.listen_to = 0;
@@ -2246,6 +2250,10 @@ void dw1000_unit_test()
         switch (m_dw1000_ctx.twr_state) {
         case DW1000_DS_TWR_STATE_TX_INIT:
         {
+        #if (CONFIG_DW1000_REINIT)
+            if (dw1000_init(false))
+                goto err;
+        #endif
             sleep_ms(1000);
             printf("-> blink %d\n", m_dw1000_ctx.seq_num);
             m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_BLINK;

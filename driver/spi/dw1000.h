@@ -19,6 +19,7 @@
 #define CONFIG_DW1000_TAG               (0)
 #define CONFIG_DW1000_ANCHOR            (1)
 #define CONFIG_DW1000_AUTO_RX           (1)
+#define CONFIG_DW1000_REINIT            (1)
 #if (CONFIG_DW1000_ANCHOR)
 #define CONFIG_DW1000_ANCHOR_POLLING_MODE (0)
 #endif
