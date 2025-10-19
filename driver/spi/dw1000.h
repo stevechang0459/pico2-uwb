@@ -19,6 +19,7 @@
 #define CONFIG_DW1000_TAG               (0)
 #define CONFIG_DW1000_ANCHOR            (1)
 #define CONFIG_DW1000_AUTO_RX           (1)
+#define CONFIG_DW1000_REINIT            (1)
 #if (CONFIG_DW1000_ANCHOR)
 #define CONFIG_DW1000_ANCHOR_POLLING_MODE (0)
 #endif
@@ -2620,7 +2621,6 @@ struct dw1000_context
     bool is_txprf_16mhz;
     bool lde_run_enable;
     bool sleep_enable;
-    volatile bool listen_to;
 };
 
 void dw1000_ctx_init();
