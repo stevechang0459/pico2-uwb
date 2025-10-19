@@ -2623,6 +2623,23 @@ struct dw1000_context
     bool sleep_enable;
 };
 
+
+#define DW1000_TRACE_INIT               (0x00000001)
+#define DW1000_TRACE_INFO               (0x00000002)
+#define DW1000_TRACE_DEBUG              (0x00000004)
+#define DW1000_TRACE_WARN               (0x00000008)
+#define DW1000_TRACE_ERROR              (0x00000010)
+
+#define DW1000_TRACE_FILTER \
+    (DW1000_TRACE_INIT | DW1000_TRACE_INFO | DW1000_TRACE_DEBUG | DW1000_TRACE_WARN | DW1000_TRACE_ERROR)
+
+#define dw1000_trace(filter, ...) \
+    do { \
+        if (DW1000_TRACE_##filter & DW1000_TRACE_FILTER) { \
+            printf(__VA_ARGS__); \
+        } \
+    } while (0)
+
 void dw1000_ctx_init();
 void dw1000_unit_test();
 
