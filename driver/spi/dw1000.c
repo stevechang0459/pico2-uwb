@@ -22,6 +22,13 @@
 
 static bool led_out = 0;
 static struct dw1000_context m_dw1000_ctx = {0};
+uint64_t dx_time;
+#if (CONFIG_DW1000_ANCHOR)
+uint64_t t_poll_rx, t_resp_tx, t_final_rx;
+#endif
+#if (CONFIG_DW1000_TAG)
+uint64_t t_poll_tx, t_resp_rx, t_final_dx;
+#endif
 
 #define DW1000_SUB_REG_DESC(m, t, s) \
     {.reg_file_id = DW1000_##m, .length = sizeof(union DW1000_SUB_REG_##m), .reg_file_type = DW1000_##t, .mnemonic = #m, .desc = s}
@@ -1665,6 +1672,11 @@ int dw1000_init(bool verbose)
     if (dw1000_long_indexed_write(spi_cfg, DW1000_LDE_CTRL, DW1000_LDE_CFG2, lde_cfg2, sizeof(*lde_cfg2), !verbose ? NULL : "lde_cfg2: "))
         goto err;
 
+    union DW1000_SUB_REG_LDE_RXANTD *lde_rxantd = &m_dw1000_ctx.lde_rxantd;
+    lde_rxantd->value = 0x8000;
+    if (dw1000_long_indexed_write(spi_cfg, DW1000_LDE_CTRL, DW1000_LDE_RXANTD, lde_rxantd, sizeof(*lde_rxantd), !verbose ? NULL : "lde_rxantd: "))
+        goto err;
+
     union DW1000_SUB_REG_LDE_REPC *lde_repc = &m_dw1000_ctx.lde_repc;
     uint16_t _lde_repc[24] = {
         [0]  = 0x5998,
@@ -1912,8 +1924,8 @@ int dw1000_transmit_message(void *buf, size_t len, bool wait4resp)
     if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CTRL, &sys_ctrl, sizeof(sys_ctrl), NULL))
         goto err;
 
-    pico_set_led(led_out);
-    led_out = !led_out;
+    // pico_set_led(led_out);
+    // led_out = !led_out;
 
     return 0;
 err:
@@ -1948,8 +1960,8 @@ int dw1000_delayed_transmit_message(void *buf, size_t len, uint64_t dx_time, boo
     if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CTRL, &sys_ctrl, sizeof(sys_ctrl), NULL))
         goto err;
 
-    pico_set_led(led_out);
-    led_out = !led_out;
+    // pico_set_led(led_out);
+    // led_out = !led_out;
 
     return 0;
 err:
@@ -1960,25 +1972,27 @@ err:
 void dw1000_isr()
 {
     const struct spi_config *spi_cfg = &m_dw1000_ctx.spi_cfg;
-    union DW1000_REG_SYS_STATUS *sys_status = &m_dw1000_ctx.sys_status;
-    if (dw1000_non_indexed_read(spi_cfg, DW1000_SYS_STATUS, sys_status, sizeof(*sys_status), NULL))
+    if (dw1000_non_indexed_read(spi_cfg, DW1000_SYS_STATUS, &m_dw1000_ctx.sys_status, sizeof(m_dw1000_ctx.sys_status), NULL))
         goto err;
+    union DW1000_REG_SYS_STATUS sys_status = m_dw1000_ctx.sys_status;
 
     #if (CONFIG_DW1000_ANCHOR_LISTEN_TO)
     if (m_dw1000_ctx.twr_state == DW1000_DS_TWR_STATE_LISTEN)
         m_dw1000_ctx.listen_to++;
     else
     #endif
+    #if (!CONFIG_DW1000_DELAY_TX)
         print_buf(sys_status, sizeof(*sys_status), "\nisr: ");
+    #endif
 
-    if (sys_status->ofs_00.value & (DW1000_SYS_STS_RXFCG | DW1000_SYS_STS_RXDFR))
+    if (sys_status.ofs_00.value & (DW1000_SYS_STS_RXFCG | DW1000_SYS_STS_RXDFR))
     {
-        pico_set_led(led_out);
-        led_out = !led_out;
+        // pico_set_led(led_out);
+        // led_out = !led_out;
 
         // dw1000_trace(INFO, "rxf:%d-%d-(%d,%d)-%d-%d-(%d,%d)\n",
-        //     sys_status->ofs_00.rxprd, sys_status->ofs_00.rxsfdd, sys_status->ofs_00.rxphd, sys_status->ofs_00.rxphe,
-        //     sys_status->ofs_00.ldedone, sys_status->ofs_00.rxdfr,sys_status->ofs_00.rxfcg, sys_status->ofs_00.rxfce);
+        //     sys_status.ofs_00.rxprd, sys_status.ofs_00.rxsfdd, sys_status.ofs_00.rxphd, sys_status.ofs_00.rxphe,
+        //     sys_status.ofs_00.ldedone, sys_status.ofs_00.rxdfr,sys_status.ofs_00.rxfcg, sys_status.ofs_00.rxfce);
 
         // union DW1000_REG_RX_FINFO rx_finfo;
         // if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_FINFO, &rx_finfo, sizeof(rx_finfo), NULL))
@@ -1992,41 +2006,69 @@ void dw1000_isr()
         // if (dw1000_rx_start(spi_cfg))
         //     goto err;
     }
-    else if (sys_status->ofs_00.value & DW1000_SYS_STS_RXRFTO)
+    #if (CONFIG_DW1000_DELAY_TX)
+    else if (sys_status.ofs_00.value & DW1000_SYS_STS_TXFRS)
+    {
+    #if (CONFIG_DW1000_ANCHOR)
+        // response sent
+        if (m_dw1000_ctx.catch_resp_txtfs) {
+            m_dw1000_ctx.catch_resp_txtfs = false;
+            if (dw1000_non_indexed_read(spi_cfg, DW1000_TX_TIME, &t_resp_tx, 5, NULL))
+                goto err;
+            // dw1000_trace(INFO, "t_resp_tx: %llx\n", t_resp_tx);
+        }
+    #endif
+    #if (CONFIG_DW1000_TAG)
+        if (m_dw1000_ctx.catch_poll_txtfs) {
+            m_dw1000_ctx.catch_poll_txtfs = false;
+            if (dw1000_non_indexed_read(spi_cfg, DW1000_TX_TIME, &t_poll_tx, 5, NULL))
+                goto err;
+            // dw1000_trace(INFO, "t_poll_tx: %llx\n", t_poll_tx)
+        }
+        // if (m_dw1000_ctx.catch_final_txtfs) {
+        //     m_dw1000_ctx.catch_final_txtfs = false;
+        //     if (dw1000_non_indexed_read(spi_cfg, DW1000_TX_TIME, &t_final_dx, 5, NULL))
+        //         goto err;
+        //     // dw1000_trace(INFO, "t_final_dx: %llx\n", t_final_dx)
+        // }
+    #endif
+    }
+    #endif
+    else if (sys_status.ofs_00.value & DW1000_SYS_STS_RXRFTO)
     {
         #if (CONFIG_DW1000_ANCHOR_LISTEN_TO)
         if (m_dw1000_ctx.twr_state != DW1000_DS_TWR_STATE_LISTEN)
         #endif
             dw1000_trace(INFO, "rxrfto\n");
     }
-    else if (sys_status->ofs_00.value & (DW1000_SYS_STS_RXFSL | DW1000_SYS_STS_RXFCE | DW1000_SYS_STS_RXPHE))
+    else if (sys_status.ofs_00.value & (DW1000_SYS_STS_RXFSL | DW1000_SYS_STS_RXFCE | DW1000_SYS_STS_RXPHE))
     {
-        print_buf(sys_status, sizeof(*sys_status), "\nre00: ");
+        print_buf(&sys_status, sizeof(sys_status), "\nre00: ");
         dw1000_trace(INFO, "rxf:%d-%d-(%d,%d)-%d-%d-(%d,%d)\n",
-            sys_status->ofs_00.rxprd, sys_status->ofs_00.rxsfdd, sys_status->ofs_00.rxphd, sys_status->ofs_00.rxphe,
-            sys_status->ofs_00.ldedone, sys_status->ofs_00.rxdfr,sys_status->ofs_00.rxfcg, sys_status->ofs_00.rxfce);
+            sys_status.ofs_00.rxprd, sys_status.ofs_00.rxsfdd, sys_status.ofs_00.rxphd, sys_status.ofs_00.rxphe,
+            sys_status.ofs_00.ldedone, sys_status.ofs_00.rxdfr,sys_status.ofs_00.rxfcg, sys_status.ofs_00.rxfce);
     #if (!CONFIG_DW1000_AUTO_RX)
         if (dw1000_rx_start(spi_cfg))
             goto err;
     #endif
     }
-    else if (sys_status->ofs_00.value & 0x3FFF9000)
+    else if (sys_status.ofs_00.value & 0x3FFF9000)
     {
-        print_buf(sys_status, sizeof(*sys_status), "\nmics: ");
+        print_buf(&sys_status, sizeof(sys_status), "\nmics: ");
         dw1000_trace(INFO, "rxf:%d-%d-(%d,%d)-%d-%d-(%d,%d)\n",
-            sys_status->ofs_00.rxprd, sys_status->ofs_00.rxsfdd, sys_status->ofs_00.rxphd, sys_status->ofs_00.rxphe,
-            sys_status->ofs_00.ldedone, sys_status->ofs_00.rxdfr,sys_status->ofs_00.rxfcg, sys_status->ofs_00.rxfce);
+            sys_status.ofs_00.rxprd, sys_status.ofs_00.rxsfdd, sys_status.ofs_00.rxphd, sys_status.ofs_00.rxphe,
+            sys_status.ofs_00.ldedone, sys_status.ofs_00.rxdfr,sys_status.ofs_00.rxfcg, sys_status.ofs_00.rxfce);
     #if (!CONFIG_DW1000_AUTO_RX)
         if (dw1000_rx_start(spi_cfg))
             goto err;
     #endif
     }
-    else if (sys_status->ofs_04.value & (DW1000_SYS_STS_TXPUTE | DW1000_SYS_STS_RXRSCS))
+    else if (sys_status.ofs_04.value & (DW1000_SYS_STS_TXPUTE | DW1000_SYS_STS_RXRSCS))
     {
-        print_buf(sys_status, sizeof(*sys_status), "\nre04: ");
+        print_buf(&sys_status, sizeof(sys_status), "\nre04: ");
         dw1000_trace(INFO, "rxf:%d-%d-(%d,%d)-%d-%d-(%d,%d)\n",
-            sys_status->ofs_00.rxprd, sys_status->ofs_00.rxsfdd, sys_status->ofs_00.rxphd, sys_status->ofs_00.rxphe,
-            sys_status->ofs_00.ldedone, sys_status->ofs_00.rxdfr,sys_status->ofs_00.rxfcg, sys_status->ofs_00.rxfce);
+            sys_status.ofs_00.rxprd, sys_status.ofs_00.rxsfdd, sys_status.ofs_00.rxphd, sys_status.ofs_00.rxphe,
+            sys_status.ofs_00.ldedone, sys_status.ofs_00.rxdfr,sys_status.ofs_00.rxfcg, sys_status.ofs_00.rxfce);
     #if (!CONFIG_DW1000_AUTO_RX)
         if (dw1000_rx_start(spi_cfg))
             goto err;
@@ -2148,6 +2190,7 @@ void dw1000_unit_test()
 
 #if (CONFIG_DW1000_ANCHOR)
     union DW1000_REG_RX_TIME rx_time;
+    uint64_t t_reply_1, t_reply_2, t_round_1, t_round_2, t_round_1_adj, t_round_2_adj;
     m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
     while (1) {
         volatile union DW1000_REG_SYS_STATUS *sys_status = &m_dw1000_ctx.sys_status;
@@ -2172,15 +2215,16 @@ void dw1000_unit_test()
             if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CFG, &m_dw1000_ctx.sys_cfg, sizeof(m_dw1000_ctx.sys_cfg), NULL))
                 goto err;
         #endif
-
-            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_LISTEN;
-            #if (CONFIG_DW1000_ANCHOR_LISTEN_TO)
+        #if (CONFIG_DW1000_ANCHOR_LISTEN_TO)
             if (!m_dw1000_ctx.listen_to)
-            #endif
+        #endif
                 dw1000_trace(INFO, "-> listen\n");
 
             if (dw1000_rx_start(spi_cfg))
                 goto err;
+
+            t_poll_rx = t_resp_tx = t_final_rx = 0;
+            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_LISTEN;
             break;
         }
         // Discovery phase
@@ -2189,15 +2233,15 @@ void dw1000_unit_test()
             if (sys_status->ofs_00.rxfcg) {
                 sys_status->ofs_00.value = 0;
 
-            #if (CONFIG_DW1000_DELAY_TX)
-               if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_TIME, &rx_time, 5, NULL))
-                    goto err;
-                dw1000_trace(PERF, "rx_stamp: %llx\n", rx_time.rx_stamp);
+            // #if (CONFIG_DW1000_DELAY_TX)
+            //    if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_TIME, &rx_time, 5, NULL))
+            //         goto err;
+            //     dw1000_trace(PERF, "rx_stamp: %llx\n", rx_time.rx_stamp);
 
-                union ieee_blink_frame *rx_frame = (void *)m_dw1000_ctx.rx_buf;
-                if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_BUFFER, rx_frame, 10, NULL))
-                    goto err;
-            #else
+            //     union ieee_blink_frame *rx_frame = (void *)m_dw1000_ctx.rx_buf;
+            //     if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_BUFFER, rx_frame, sizeof(union ieee_blink_frame), NULL))
+            //         goto err;
+            // #else
                 if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_TIME, &rx_time, sizeof(rx_time), NULL))
                     goto err;
                 // print_buf(&rx_time, sizeof(rx_time), "rx_time:\n");
@@ -2213,13 +2257,13 @@ void dw1000_unit_test()
                 union ieee_blink_frame *rx_frame = (void *)m_dw1000_ctx.rx_buf;
                 if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_BUFFER, rx_frame, rx_finfo.rxflen, NULL))
                     goto err;
-                // print_buf(rx_frame, rx_finfo.rxflen, "blink frame:\n");
-            #endif
+                print_buf(rx_frame, rx_finfo.rxflen, "blink frame:\n");
+            // #endif
                 if (rx_frame->fctrl == IEEE_802_15_4_BLINK_CCP_64) {
                     m_dw1000_ctx.tar_addr = rx_frame->long_address;
                     m_dw1000_ctx.seq_num  = rx_frame->seq_num;
+                    dw1000_trace(INFO, "-> ranging init %d\n", m_dw1000_ctx.seq_num);
                     m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RANGING_INIT;
-                    dw1000_trace(PERF, "-> ranging init %d\n", m_dw1000_ctx.seq_num);
                 } else {
                     dw1000_trace(WARN, "@@ invalid blink\n");
                     m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
@@ -2241,7 +2285,6 @@ void dw1000_unit_test()
             if (dw1000_non_indexed_write(spi_cfg, DW1000_SYS_CFG, &m_dw1000_ctx.sys_cfg, sizeof(m_dw1000_ctx.sys_cfg), NULL))
                 goto err;
         #endif
-
             union dw1000_rng_init_msg *tx_frame = (void *)m_dw1000_ctx.tx_buf;
             tx_frame->fctrl    = IEEE_802_15_4_FCTRL_RANGE_16;
             tx_frame->seq_num  = ++m_dw1000_ctx.seq_num;
@@ -2252,15 +2295,14 @@ void dw1000_unit_test()
 
             dw1000_trace(PERF, "-> poll wait %d\n", m_dw1000_ctx.seq_num);
             m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_POLL_WAIT;
-        #if (CONFIG_DW1000_DELAY_TX)
-            #define DELAY_MS    (3)
-            tx_frame->delay_ms = DELAY_MS;
-            uint64_t dx_time = rx_time.rx_stamp + DX_TIME_MS(DELAY_MS);
-            dw1000_trace(PERF, " dx_time: %10llx, %llx\n", dx_time, DX_TIME_MS(DELAY_MS));
-            dw1000_delayed_transmit_message(tx_frame, sizeof(*tx_frame), dx_time, true);
-        #else
+            tx_frame->tx_delay_ms = TX_DELAY_MS;
+        // #if (CONFIG_DW1000_DELAY_TX)
+        //     uint64_t dx_time = rx_time.rx_stamp + DX_TIME_MS(TX_DELAY_MS);
+        //     dw1000_trace(PERF, " dx_time: %10llx, %llx\n", dx_time, DX_TIME_MS(TX_DELAY_MS));
+        //     dw1000_delayed_transmit_message(tx_frame, sizeof(*tx_frame), dx_time, true);
+        // #else
             dw1000_transmit_message(tx_frame, sizeof(*tx_frame), true);
-        #endif
+        // #endif
             break;
         }
         case DW1000_DS_TWR_STATE_POLL_WAIT:
@@ -2268,6 +2310,15 @@ void dw1000_unit_test()
             if (sys_status->ofs_00.rxfcg) {
                 sys_status->ofs_00.value = 0;
 
+            #if (CONFIG_DW1000_DELAY_TX)
+               if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_TIME, &t_poll_rx, 5, NULL))
+                    goto err;
+                dw1000_trace(PERF, "rx_stamp: %llx\n", t_poll_rx);
+
+                union dw1000_poll_msg *rx_frame = (void *)m_dw1000_ctx.rx_buf;
+                if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_BUFFER, rx_frame, sizeof(union dw1000_poll_msg), NULL))
+                    goto err;
+            #else
                 union DW1000_REG_RX_FINFO rx_finfo;
                 if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_FINFO, &rx_finfo, sizeof(rx_finfo), NULL))
                     goto err;
@@ -2276,7 +2327,8 @@ void dw1000_unit_test()
                 union dw1000_poll_msg *rx_frame = (void *)m_dw1000_ctx.rx_buf;
                 if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_BUFFER, rx_frame, rx_finfo.rxflen, NULL))
                     goto err;
-                // print_buf(rx_frame, rx_finfo.rxflen, "poll frame:\n");
+                print_buf(rx_frame, rx_finfo.rxflen, "poll frame:\n");
+            #endif
 
                 if ((rx_frame->fctrl == IEEE_802_15_4_FCTRL_RANGE_16) &&
                     ((m_dw1000_ctx.seq_num + 1) == rx_frame->seq_num) &&
@@ -2284,6 +2336,7 @@ void dw1000_unit_test()
                     (rx_frame->dst_addr == m_dw1000_ctx.my_addr)) {
                     m_dw1000_ctx.tar_addr = rx_frame->src_addr;
                     m_dw1000_ctx.seq_num  = rx_frame->seq_num;
+                    dw1000_trace(PERF, "-> resp %d,%d\n", m_dw1000_ctx.seq_num);
                     m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RESPONSE;
                 } else {
                     dw1000_trace(ERROR, "@@ err %d,(%d,%d),%d,%d\n", (rx_frame->fctrl == IEEE_802_15_4_FCTRL_RANGE_16),
@@ -2311,9 +2364,16 @@ void dw1000_unit_test()
             tx_frame->src_addr = m_dw1000_ctx.my_addr;
             tx_frame->code     = DW1000_TWR_CODE_RESP;
 
-            dw1000_trace(INFO, "-> final wait %d\n", m_dw1000_ctx.seq_num);
-            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_FINAL_WAIT;
+        #if (CONFIG_DW1000_DELAY_TX)
+            dx_time = t_poll_rx + DX_TIME_MS(TX_DELAY_MS);
+            m_dw1000_ctx.catch_resp_txtfs = true;
+            dw1000_trace(PERF, " dx_time: %10llx, %llx\n", dx_time, DX_TIME_MS(TX_DELAY_MS));
+            dw1000_delayed_transmit_message(tx_frame, sizeof(*tx_frame), dx_time, true);
+        #else
             dw1000_transmit_message(tx_frame, sizeof(*tx_frame), true);
+        #endif
+            dw1000_trace(PERF, "-> final wait %d\n", m_dw1000_ctx.seq_num);
+            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_FINAL_WAIT;
             break;
         }
         case DW1000_DS_TWR_STATE_FINAL_WAIT:
@@ -2321,6 +2381,15 @@ void dw1000_unit_test()
             if (sys_status->ofs_00.rxfcg) {
                 sys_status->ofs_00.value = 0;
 
+            #if (CONFIG_DW1000_DELAY_TX)
+               if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_TIME, &t_final_rx, 5, NULL))
+                    goto err;
+                dw1000_trace(PERF, "rx_stamp: %llx\n", t_final_rx);
+
+                union dw1000_final_msg *rx_frame = (void *)m_dw1000_ctx.rx_buf;
+                if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_BUFFER, rx_frame, sizeof(union dw1000_final_msg), NULL))
+                    goto err;
+            #else
                 union DW1000_REG_RX_FINFO rx_finfo;
                 if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_FINFO, &rx_finfo, sizeof(rx_finfo), NULL))
                     goto err;
@@ -2329,7 +2398,8 @@ void dw1000_unit_test()
                 union dw1000_final_msg *rx_frame = (void *)m_dw1000_ctx.rx_buf;
                 if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_BUFFER, rx_frame, rx_finfo.rxflen, NULL))
                     goto err;
-                // print_buf(rx_frame, rx_finfo.rxflen, "final frame:\n");
+                print_buf(rx_frame, rx_finfo.rxflen, "final frame:\n");
+            #endif
 
                 if ((rx_frame->fctrl == IEEE_802_15_4_FCTRL_RANGE_16) &&
                     ((m_dw1000_ctx.seq_num + 1) == rx_frame->seq_num) &&
@@ -2337,8 +2407,32 @@ void dw1000_unit_test()
                     (rx_frame->dst_addr == m_dw1000_ctx.my_addr)) {
                     m_dw1000_ctx.tar_addr = rx_frame->src_addr;
                     m_dw1000_ctx.seq_num  = rx_frame->seq_num;
-                    m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
+                    pico_set_led(led_out);
+                    led_out = !led_out;
                     dw1000_trace(INFO, "@@ final cmpl\n");
+                    t_round_1 = (uint64_t)rx_frame->t_round_1;      // from tag
+                    t_reply_2 = (uint64_t)rx_frame->t_reply_2;      // from tag
+                    t_reply_1 = (uint64_t)(t_resp_tx - t_poll_rx);
+                    t_round_2 = (uint64_t)(t_final_rx - t_resp_tx);
+                    if (t_round_1 * t_round_2 < t_reply_1 * t_reply_2) {
+                        t_round_1_adj = (t_round_1 < t_reply_2 ? t_reply_2 + 1 : t_round_1);
+                        t_round_2_adj = (t_round_2 < t_reply_1 ? t_reply_1 + 1 : t_round_2);
+                    } else {
+                        t_round_1_adj = t_round_1;
+                        t_round_2_adj = t_round_2;
+                    }
+                    dw1000_trace(INFO, " t_round_1: %10llx, %10llx\n", t_round_1, t_round_1_adj);
+                    dw1000_trace(INFO, " t_reply_2: %10llx\n", t_reply_2);
+                    dw1000_trace(INFO, " t_reply_1: %10llx, %10llx\n", t_reply_1, DX_TIME_MS(TX_DELAY_MS));
+                    dw1000_trace(INFO, " t_round_2: %10llx, %10llx\n", t_round_2, t_round_2_adj);
+
+                    dw1000_trace(INFO, " t1: %lf\n", (double)((t_round_1_adj * t_round_2_adj) - (t_reply_1 * t_reply_2)));
+                    dw1000_trace(INFO, " t2: %lf\n", (double)(t_round_1_adj + t_round_2_adj + t_reply_1 + t_reply_2));
+
+                    double t_prop = (double)((t_round_1_adj * t_round_2_adj) - (t_reply_1 * t_reply_2)) / (double)(t_round_1_adj + t_round_2_adj + t_reply_1 + t_reply_2);
+                    dw1000_trace(INFO, " t_prop   : %lf\n", t_prop);
+                    dw1000_trace(INFO, " dist     : %lf cm\n", (((double)SPEED_OF_LIGHT * (double)t_prop * 100.0) / (double)DW1000_SAMPLING_CLOCK));
+                    m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RX_INIT;
                 } else {
                     dw1000_trace(ERROR, "@@ err %d,(%d,%d),%d,%d\n", (rx_frame->fctrl == IEEE_802_15_4_FCTRL_RANGE_16),
                         (m_dw1000_ctx.seq_num + 1), rx_frame->seq_num,
@@ -2362,18 +2456,21 @@ void dw1000_unit_test()
 #endif
 
 #if (CONFIG_DW1000_TAG)
+    union DW1000_REG_RX_TIME rx_time;
     m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_TX_INIT;
     while (1) {
         volatile union DW1000_REG_SYS_STATUS *sys_status = &m_dw1000_ctx.sys_status;
         switch (m_dw1000_ctx.twr_state) {
         case DW1000_DS_TWR_STATE_TX_INIT:
         {
+            sleep_ms(1000);
         #if (CONFIG_DW1000_REINIT)
             if (dw1000_init(false))
                 goto err;
         #endif
-            sleep_ms(1000);
             dw1000_trace(INFO, "-> blink %d\n", m_dw1000_ctx.seq_num);
+            pico_set_led(led_out);
+            led_out = !led_out;
             m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_BLINK;
             break;
         }
@@ -2385,15 +2482,32 @@ void dw1000_unit_test()
             tx_frame->seq_num      = ++m_dw1000_ctx.seq_num;
             tx_frame->long_address = m_dw1000_ctx.my_addr;
 
-            dw1000_trace(INFO, "-> init wait %d\n", m_dw1000_ctx.seq_num);
-            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_INIT_WAIT;
             dw1000_transmit_message(tx_frame, sizeof(*tx_frame), true);
+            t_poll_tx = t_resp_rx = t_final_dx = 0;
+            dw1000_trace(PERF, "-> init wait %d\n", m_dw1000_ctx.seq_num);
+            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_INIT_WAIT;
             break;
         }
         case DW1000_DS_TWR_STATE_INIT_WAIT:
         {
             if (sys_status->ofs_00.rxfcg) {
                 sys_status->ofs_00.value = 0;
+
+            #if (CONFIG_DW1000_DELAY_TX)
+               if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_TIME, &rx_time, 5, NULL))
+                    goto err;
+                dw1000_trace(PERF, "rx_stamp: %llx\n", rx_time.rx_stamp);
+
+                union dw1000_rng_init_msg *rx_frame = (void *)m_dw1000_ctx.rx_buf;
+                if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_BUFFER, rx_frame, sizeof(union dw1000_rng_init_msg), NULL))
+                    goto err;
+            #else
+                if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_TIME, &rx_time, sizeof(rx_time), NULL))
+                    goto err;
+                // print_buf(&rx_time, sizeof(rx_time), "rx_time:\n");
+                uint64_t rx_rawst = ((uint64_t)rx_time.rx_rawst_h << 24) | (uint64_t)rx_time.rx_rawst_l;
+                dw1000_trace(INFO, "rx_stamp: %10llx\n", rx_time.rx_stamp);
+                dw1000_trace(INFO, "rx_rawst: %10llx\n", rx_rawst);
 
                 union DW1000_REG_RX_FINFO rx_finfo;
                 if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_FINFO, &rx_finfo, sizeof(rx_finfo), NULL))
@@ -2404,14 +2518,15 @@ void dw1000_unit_test()
                 if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_BUFFER, rx_frame, rx_finfo.rxflen, NULL))
                     goto err;
                 print_buf(rx_frame, rx_finfo.rxflen, "rng init frame:\n");
-
+            #endif
                 if ((rx_frame->fctrl == IEEE_802_15_4_FCTRL_RANGE_16) &&
                     ((m_dw1000_ctx.seq_num + 1) == rx_frame->seq_num) &&
                     (rx_frame->code == DW1000_TWR_CODE_RNG_INIT) &&
                     (rx_frame->dst_addr == m_dw1000_ctx.my_addr)) {
-                    m_dw1000_ctx.tar_addr = rx_frame->src_addr;
-                    m_dw1000_ctx.seq_num  = rx_frame->seq_num;
-                    dw1000_trace(INFO, "-> poll %d\n", m_dw1000_ctx.seq_num);
+                    m_dw1000_ctx.tar_addr    = rx_frame->src_addr;
+                    m_dw1000_ctx.seq_num     = rx_frame->seq_num;
+                    m_dw1000_ctx.tx_delay_ms = rx_frame->tx_delay_ms;
+                    dw1000_trace(PERF, "-> poll %d,%d\n", m_dw1000_ctx.seq_num, rx_frame->tx_delay_ms);
                     m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_POLL;
                 } else {
                     dw1000_trace(ERROR, "@@ err %d,(%d,%d),%d,%d\n", (rx_frame->fctrl == IEEE_802_15_4_FCTRL_RANGE_16),
@@ -2436,10 +2551,21 @@ void dw1000_unit_test()
             tx_frame->dst_addr = m_dw1000_ctx.tar_addr;
             tx_frame->src_addr = m_dw1000_ctx.my_addr;
             tx_frame->code     = DW1000_TWR_CODE_POLL;
+        #if (CONFIG_DW1000_DELAY_TX)
+            // #define TX_DELAY_MS (5)
+            // uint64_t dx_time = rx_time.rx_stamp + DX_TIME_MS(TX_DELAY_MS);
+            // dw1000_trace(PERF, " dx_time: %10llx, %llx\n", dx_time, DX_TIME_MS(TX_DELAY_MS));
+            // dw1000_delayed_transmit_message(tx_frame, sizeof(*tx_frame), dx_time, true);
 
-            dw1000_trace(INFO, "-> response wait %d\n", m_dw1000_ctx.seq_num);
-            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RESPONSE_WAIT;
+            m_dw1000_ctx.catch_poll_txtfs = true;
+            dx_time = rx_time.rx_stamp + DX_TIME_MS(m_dw1000_ctx.tx_delay_ms);
+            dw1000_trace(PERF, " dx_time: %10llx, %llx\n", dx_time, DX_TIME_MS(m_dw1000_ctx.tx_delay_ms));
+            dw1000_delayed_transmit_message(tx_frame, sizeof(*tx_frame), dx_time, true);
+        #else
             dw1000_transmit_message(tx_frame, sizeof(*tx_frame), true);
+        #endif
+            dw1000_trace(PERF, "-> response wait %d\n", m_dw1000_ctx.seq_num);
+            m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_RESPONSE_WAIT;
             break;
         }
         case DW1000_DS_TWR_STATE_RESPONSE_WAIT:
@@ -2447,6 +2573,15 @@ void dw1000_unit_test()
             if (sys_status->ofs_00.rxfcg) {
                 sys_status->ofs_00.value = 0;
 
+            #if (CONFIG_DW1000_DELAY_TX)
+               if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_TIME, &t_resp_rx, 5, NULL))
+                    goto err;
+                dw1000_trace(PERF, "rx_stamp: %llx\n", t_resp_rx);
+
+                union dw1000_resp_msg *rx_frame = (void *)m_dw1000_ctx.rx_buf;
+                if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_BUFFER, rx_frame, sizeof(union dw1000_resp_msg), NULL))
+                    goto err;
+            #else
                 union DW1000_REG_RX_FINFO rx_finfo;
                 if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_FINFO, &rx_finfo, sizeof(rx_finfo), NULL))
                     goto err;
@@ -2456,14 +2591,14 @@ void dw1000_unit_test()
                 if (dw1000_non_indexed_read(spi_cfg, DW1000_RX_BUFFER, rx_frame, rx_finfo.rxflen, NULL))
                     goto err;
                 print_buf(rx_frame, rx_finfo.rxflen, "resp frame:\n");
-
+            #endif
                 if ((rx_frame->fctrl == IEEE_802_15_4_FCTRL_RANGE_16) &&
                     ((m_dw1000_ctx.seq_num + 1) == rx_frame->seq_num) &&
                     (rx_frame->code == DW1000_TWR_CODE_RESP) &&
                     (rx_frame->dst_addr == m_dw1000_ctx.my_addr)) {
                     m_dw1000_ctx.tar_addr = rx_frame->src_addr;
                     m_dw1000_ctx.seq_num  = rx_frame->seq_num;
-                    dw1000_trace(INFO, "-> final %d\n", m_dw1000_ctx.seq_num);
+                    dw1000_trace(PERF, "-> final %d\n", m_dw1000_ctx.seq_num);
                     m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_FINAL;
                 } else {
                     dw1000_trace(ERROR, "@@ err %d,(%d,%d),%d,%d\n", (rx_frame->fctrl == IEEE_802_15_4_FCTRL_RANGE_16),
@@ -2481,16 +2616,27 @@ void dw1000_unit_test()
         case DW1000_DS_TWR_STATE_FINAL:
         {
             union dw1000_final_msg *tx_frame = (void *)m_dw1000_ctx.tx_buf;
-            tx_frame->fctrl    = IEEE_802_15_4_FCTRL_RANGE_16;
-            tx_frame->seq_num  = ++m_dw1000_ctx.seq_num;
-            tx_frame->pan_id   = DW1000_PAN_ID;
-            tx_frame->dst_addr = m_dw1000_ctx.tar_addr;
-            tx_frame->src_addr = m_dw1000_ctx.my_addr;
-            tx_frame->code     = DW1000_TWR_CODE_FINAL;
-
+            tx_frame->fctrl     = IEEE_802_15_4_FCTRL_RANGE_16;
+            tx_frame->seq_num   = ++m_dw1000_ctx.seq_num;
+            tx_frame->pan_id    = DW1000_PAN_ID;
+            tx_frame->dst_addr  = m_dw1000_ctx.tar_addr;
+            tx_frame->src_addr  = m_dw1000_ctx.my_addr;
+            tx_frame->code      = DW1000_TWR_CODE_FINAL;
+        #if (CONFIG_DW1000_DELAY_TX)
+            /**
+             * dx_time = t_final_dx
+             */
+            uint64_t dx = DX_TIME_MS(m_dw1000_ctx.tx_delay_ms);
+            t_final_dx = t_resp_rx + dx;
+            dw1000_trace(PERF, " dx_time: %10llx, %llx\n", t_final_dx, dx);
+            tx_frame->t_round_1 = (uint32_t)(t_resp_rx - t_poll_tx);
+            tx_frame->t_reply_2 = (uint32_t)(dx);
+            dw1000_delayed_transmit_message(tx_frame, sizeof(*tx_frame), t_final_dx, false);
+        #else
+            dw1000_transmit_message(tx_frame, sizeof(*tx_frame), false);
+        #endif
             dw1000_trace(INFO, "@@ final\n");
             m_dw1000_ctx.twr_state = DW1000_DS_TWR_STATE_TX_INIT;
-            dw1000_transmit_message(tx_frame, sizeof(*tx_frame), false);
             break;
         }
         default:

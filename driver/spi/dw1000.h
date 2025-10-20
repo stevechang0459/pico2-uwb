@@ -23,6 +23,7 @@
 #define CONFIG_DW1000_DELAY_TX          (1)
 
 #if (CONFIG_DW1000_ANCHOR)
+#define TX_DELAY_MS (4)
 #define CONFIG_DW1000_ANCHOR_LISTEN_TO      (1)
 #define CONFIG_DW1000_ANCHOR_POLLING_MODE   (0)
 #else
@@ -45,6 +46,8 @@
 #define DW1000_TWR_CODE_POLL            (0x61)
 #define DW1000_TWR_CODE_RESP            (0x50)
 #define DW1000_TWR_CODE_FINAL           (0x69)
+
+#define SPEED_OF_LIGHT                  (299792458.0)
 
 /**
  * The chipping rate given by the IEEE 802.15.4-2011 standard [1] is 499.2 MHz.
@@ -706,6 +709,7 @@ union DW1000_REG_SYS_MASK
     uint32_t value;
 };
 
+#define DW1000_SYS_MASK_MTXFRS          (1 << 7)    // Bit[7] Mask transmit frame sent event.
 
 #define DW1000_SYS_MASK_MRXPHE          (1 << 12)   // Bit[12] Receiver PHY Header Error.
 #define DW1000_SYS_MASK_MRXFCG          (1 << 14)   // Bit[14] Receiver FCS Good.
@@ -731,7 +735,14 @@ union DW1000_REG_SYS_MASK
 //     DW1000_SYS_MASK_MRFPLLLL | DW1000_SYS_MASK_MCLKPLLLL | DW1000_SYS_MASK_MRXSTDTO | \
 //     DW1000_SYS_MASK_MHPDWARN | DW1000_SYS_MASK_MTXBERR   | DW1000_SYS_MASK_MAFFREJ)
 
-#define DW1000_SYS_STS_MASK (DW1000_SYS_MASK_MRXFCG | DW1000_SYS_MASK_MRXRFTO | DW1000_SYS_MASK_MHPDWARN)
+#if (CONFIG_DW1000_DELAY_TX)
+#define DW1000_SYS_STS_MASK ( \
+    DW1000_SYS_MASK_MRXFCG   | DW1000_SYS_MASK_MRXRFTO | DW1000_SYS_MASK_MHPDWARN | \
+    DW1000_SYS_MASK_MTXFRS)
+#else
+#define DW1000_SYS_STS_MASK ( \
+    DW1000_SYS_MASK_MRXFCG   | DW1000_SYS_MASK_MRXRFTO | DW1000_SYS_MASK_MHPDWARN)
+#endif
 
 // REG:0F:00 - SYS_STATUS - System Status Register (octets 0 to 3)
 union DW1000_REG_SYS_STATUS_0F_00
@@ -778,6 +789,8 @@ union DW1000_REG_SYS_STATUS_0F_00
 };
 
 _Static_assert(sizeof(union DW1000_REG_SYS_STATUS_0F_00) == 4, "union DW1000_REG_SYS_STATUS_0F_00 must be 4 bytes");
+
+#define DW1000_SYS_STS_TXFRS        (1 << 7)    // Bit[7] Transmit Frame Sent.
 
 #define DW1000_SYS_STS_RXDFR        (1 << 13)   // Bit[13] Receiver Data Frame Ready.
 #define DW1000_SYS_STS_RXFCG        (1 << 14)   // Bit[14] Receiver FCS Good.
@@ -2503,7 +2516,7 @@ union dw1000_rng_init_msg
         uint16_t src_addr;              //!< Source address
         uint8_t code;                   //!< Function code (0x20 to indicate the ranging init message)
         uint16_t tag_addr;
-        uint16_t delay_ms;
+        uint16_t tx_delay_ms;
     };
 };
 
@@ -2553,8 +2566,8 @@ union dw1000_final_msg
         uint16_t dst_addr;              //!< Destination address
         uint16_t src_addr;              //!< Source address
         uint8_t code;                   //!< Function code (0x69 to indicate the poll message)
-        uint32_t t1;                    //!< Resp RX time – Poll TX time
-        uint32_t t2;                    //!< Final TX time – Resp RX time
+        uint32_t t_round_1;             //!< Resp RX time – Poll TX time
+        uint32_t t_reply_2;             //!< Final TX time – Resp RX time
     };
 };
 
@@ -2613,11 +2626,14 @@ struct dw1000_context
     union DW1000_SUB_REG_LDE_CFG1 lde_cfg1;
     union DW1000_SUB_REG_LDE_CFG2 lde_cfg2;
     union DW1000_SUB_REG_LDE_REPC lde_repc;
+    union DW1000_SUB_REG_LDE_RXANTD lde_rxantd;
     union DW1000_SUB_REG_TC_PGDELAY tc_pgdelay;
     union DW1000_SUB_REG_PMSC_CTRL0 pmsc_ctrl0;
     union DW1000_SUB_REG_EC_CTRL ec_ctrl;
     //
     uint32_t twr_state;
+    volatile uint32_t listen_to;
+    uint16_t tx_delay_ms;
     uint16_t tar_addr;
     uint16_t my_addr;
     uint8_t seq_num;
@@ -2625,7 +2641,9 @@ struct dw1000_context
     bool is_txprf_16mhz;
     bool lde_run_enable;
     bool sleep_enable;
-    volatile uint32_t listen_to;
+    bool catch_poll_txtfs;
+    bool catch_resp_txtfs;
+    bool catch_final_txtfs;
 };
 
 
