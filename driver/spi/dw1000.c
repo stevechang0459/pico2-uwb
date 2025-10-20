@@ -1659,7 +1659,14 @@ int dw1000_init(bool verbose)
     union DW1000_SUB_REG_LDE_CFG1 *lde_cfg1 = &m_dw1000_ctx.lde_cfg1;
     if (dw1000_long_indexed_read(spi_cfg, DW1000_LDE_CTRL, DW1000_LDE_CFG1, lde_cfg1, sizeof(*lde_cfg1), NULL))
         goto err;
+    #if (CONFIG_DW1000_NLOS)
+    // For NLOS
+    lde_cfg1->ntm = 0x7;
+    lde_cfg1->pmult = 0;
+    #else
+    // For Close-up LOS
     lde_cfg1->ntm = 0xD;
+    #endif
     if (dw1000_long_indexed_write(spi_cfg, DW1000_LDE_CTRL, DW1000_LDE_CFG1, lde_cfg1, sizeof(*lde_cfg1), !verbose ? NULL : "lde_cfg1: "))
         goto err;
 
@@ -1668,7 +1675,13 @@ int dw1000_init(bool verbose)
      * MHz PRF before proceeding to use the default configuration.
      */
     union DW1000_SUB_REG_LDE_CFG2 *lde_cfg2 = &m_dw1000_ctx.lde_cfg2;
+    #if (CONFIG_DW1000_NLOS)
+    // For NLOS
+    lde_cfg2->value = 0x0003;
+    #else
+    // For Close-up LOS
     lde_cfg2->value = (is_txprf_16mhz ? 0x1607 : 0x0607);
+    #endif
     if (dw1000_long_indexed_write(spi_cfg, DW1000_LDE_CTRL, DW1000_LDE_CFG2, lde_cfg2, sizeof(*lde_cfg2), !verbose ? NULL : "lde_cfg2: "))
         goto err;
 
@@ -2414,6 +2427,7 @@ void dw1000_unit_test()
                     t_reply_2 = (uint64_t)rx_frame->t_reply_2;      // from tag
                     t_reply_1 = (uint64_t)(t_resp_tx - t_poll_rx);
                     t_round_2 = (uint64_t)(t_final_rx - t_resp_tx);
+                    // For close-up los workaround
                     if (t_round_1 * t_round_2 < t_reply_1 * t_reply_2) {
                         t_round_1_adj = (t_round_1 < t_reply_2 ? t_reply_2 + 1 : t_round_1);
                         t_round_2_adj = (t_round_2 < t_reply_1 ? t_reply_1 + 1 : t_round_2);

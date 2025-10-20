@@ -21,10 +21,11 @@
 #define CONFIG_DW1000_AUTO_RX           (1)
 #define CONFIG_DW1000_REINIT            (1)
 #define CONFIG_DW1000_DELAY_TX          (1)
+#define CONFIG_DW1000_NLOS              (1)
 
 #if (CONFIG_DW1000_ANCHOR)
 #define TX_DELAY_MS (4)
-#define CONFIG_DW1000_ANCHOR_LISTEN_TO      (1)
+#define CONFIG_DW1000_ANCHOR_LISTEN_TO      (0)
 #define CONFIG_DW1000_ANCHOR_POLLING_MODE   (0)
 #else
 #define CONFIG_DW1000_ANCHOR_LISTEN_TO      (0)
