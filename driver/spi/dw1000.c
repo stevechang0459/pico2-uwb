@@ -1412,7 +1412,9 @@ int dw1000_init(bool verbose)
             tx_power->value = (is_txprf_16mhz ? 0x5F5F5F5F : 0x9A9A9A9A);
             break;
         case 5:
-            tx_power->value = (is_txprf_16mhz ? 0x48484848 : 0x85858585);
+            // tx_power->value = (is_txprf_16mhz ? 0x48484848 : 0x85858585);
+            // tx_power->value = 0x0A0A0A0A;
+            tx_power->value = 0x1F1F1F1F;
             break;
         case 7:
             tx_power->value = (is_txprf_16mhz ? 0x92929292 : 0xD1D1D1D1);
